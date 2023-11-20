@@ -14,8 +14,8 @@ Please refer to our website luma.net for additional information how the service 
 
 ## Download latest release
 
-| OS/Platform |
-|:------|:------|
+| OS/Platform | Alternative download link
+|:------| :------|
 | [macOS](https://luma/download1) |
 | [Windows](https://luma.download1) |
 | [Linux](https://luma.download1) |
