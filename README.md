@@ -1,4 +1,5 @@
 ![LumaVPN](docs/icon.png)
+# LumaVPN
 
 [![GitHub Workflow][1]](https://github.com/lumavpn/luma/actions)
 [![Go Version][2]](https://github.com/lumavpn/luma/blob/main/go.mod)
