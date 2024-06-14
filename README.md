@@ -1,9 +1,10 @@
 ![LumaVPN](docs/icon.png)
+# LumaVPN
 
 [![GitHub Workflow][1]](https://github.com/lumavpn/luma/actions)
 [![Go Version][2]](https://github.com/lumavpn/luma/blob/main/go.mod)
 
-[1]: https://img.shields.io/github/actions/workflow/status/lumavpn/luma/release.yml?logo=github
+[1]: https://img.shields.io/github/actions/workflow/status/lumavpn/luma/dev.yml?logo=github
 [2]: https://img.shields.io/github/go-mod/go-version/lumavpn/luma?logo=go
 
 This repository contains the source code for the Luma VPN app.
