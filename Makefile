@@ -16,7 +16,7 @@ LDFLAGS += -X "$(MODULE)/internal/version/version.GitCommit=$(BUILD_COMMIT)"
 
 GO_BUILD = go build $(BUILD_FLAGS) -ldflags '$(LDFLAGS)' -tags '$(BUILD_TAGS)' -trimpath
 
-.PHONY: luma 
+.PHONY: luma
 
 luma:
 	cd cmd/luma; \
