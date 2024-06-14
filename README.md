@@ -1,24 +1,18 @@
-# Luma VPN desktop and mobile app
+# Luma VPN
 
-This repository contains the source code for the Luma VPN client app.
+This repository contains the source code for the Luma VPN app.
 
 Please refer to our website luma.net for additional information how the service works.
 
 ## Features
 
-- WireGuard, OpenVPN, and other protocols
+- Proxy protocols: SOCKS5, HTTP(S), Wireguard
 - Server selection
+- Lightweight GUI
 - Lightweight GUI
 - Split tunneling
 - Custom DNS
 
 ## Download latest release
 
-| OS/Platform | Alternative download link
-|:------| :------|
-| [macOS](https://luma/download1) |
-| [Windows](https://luma.download1) |
-| [Linux](https://luma.download1) |
-| [Android](https://luma/download1)  |
-| [iOS](https://luma/download1)  |
-
+[去下载](https://github.com/lumavpn/luma/releases)
