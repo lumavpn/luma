@@ -22,6 +22,31 @@ Please refer to our website luma.net for additional information how the service 
 - Split tunneling
 - Custom DNS
 
+## Usage
+
+Create a `config.yaml` configuration file, and put it in same directory as the luma binary:
+
+```yaml
+loglevel: debug
+```
+
+## Installation
+
+Build and install the `luma` binary
+
+```shell
+make luma
+sudo cp ./build/luma /usr/local/bin
+```
+
+## Quick Start
+
+Run luma with the given config and bind it to the primary interface.
+
+```shell
+luma -config config.yaml -proxy socks5://host:port -interface en0
+```
+
 ## Download latest release
 
 [去下载](https://github.com/lumavpn/luma/releases)
