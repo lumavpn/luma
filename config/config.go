@@ -1,8 +1,11 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/lumavpn/luma/log"
 	"gopkg.in/yaml.v3"
@@ -17,6 +20,35 @@ func New() *Config {
 	return &Config{
 		LogLevel: log.DebugLevel,
 	}
+}
+
+// Init initializes a new Config from the given file and checks that it is valid
+func Init(configFile string) (*Config, error) {
+	if configFile == "" {
+		return nil, errors.New("Missing config file")
+	}
+	if !filepath.IsAbs(configFile) {
+		currentDir, _ := os.Getwd()
+		configFile = filepath.Join(currentDir, configFile)
+	}
+	cfg, err := ParseConfig(configFile)
+	if err != nil {
+		return nil, err
+	}
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+// Validate checks if the given config is valid. It returns an error otherwise
+func (c *Config) Validate() error {
+	switch c.LogLevel.String() {
+	case "debug", "info", "warn", "error":
+	default:
+		return fmt.Errorf("unsupported loglevel:%s", c.LogLevel.String())
+	}
+	return nil
 }
 
 // ParseBytes unmarshals the given bytes into a Config
