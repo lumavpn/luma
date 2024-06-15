@@ -15,9 +15,9 @@ func TestParseConfig(t *testing.T) {
 }
 
 func TestParseBytes(t *testing.T) {
-	cfg, err := ParseBytes([]byte(`loglevel: invalid`))
+	_, err := ParseBytes([]byte(`loglevel: invalid`))
 	require.EqualError(t, err, "invalid log level")
-	cfg, err = ParseBytes([]byte(`loglevel: debug`))
+	cfg, err := ParseBytes([]byte(`loglevel: debug`))
 	require.NoError(t, err)
 	b, err := yaml.Marshal(cfg)
 	require.NoError(t, err)

@@ -25,7 +25,7 @@ func (lu *Luma) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop stops running the Luma engine. It returns an error if there was an issue doing so.
-func (lu *Luma) Stop() error {
-	return nil
+// Stop stops running the Luma engine
+func (lu *Luma) Stop() {
+
 }
