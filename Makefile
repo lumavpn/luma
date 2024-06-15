@@ -24,3 +24,6 @@ luma:
 
 test:
 	$(GO) test -v ./...
+
+lint:
+	golangci-lint run
