@@ -4,7 +4,6 @@ import (
 	"net"
 
 	"github.com/lumavpn/luma/adapter"
-	"github.com/lumavpn/luma/common/pool"
 	"github.com/lumavpn/luma/common/sockopt"
 	"github.com/lumavpn/luma/conn"
 	"github.com/lumavpn/luma/log"
@@ -19,38 +18,7 @@ type UDPListener struct {
 	closed     bool
 }
 
-// RawAddress implements C.Listener
-func (l *UDPListener) RawAddress() string {
-	return l.addr
-}
-
-// Address implements C.Listener
-func (l *UDPListener) Address() string {
-	return l.packetConn.LocalAddr().String()
-}
-
-// Close implements C.Listener
-func (l *UDPListener) Close() error {
-	l.closed = true
-	return l.packetConn.Close()
-}
-
-func waitReadFrom(pc net.PacketConn) (data []byte, put func(), addr net.Addr, err error) {
-	readBuf := pool.Get(pool.UDPBufferSize)
-	put = func() {
-		_ = pool.Put(readBuf)
-	}
-	var readN int
-	readN, addr, err = pc.ReadFrom(readBuf)
-	if readN > 0 {
-		data = readBuf[:readN]
-	} else {
-		put()
-		put = nil
-	}
-	return
-}
-
+// NewUDP creates a new instance of UDPListener
 func NewUDP(addr string, tunnel adapter.TransportHandler) (*UDPListener, error) {
 	l, err := net.ListenPacket("udp", addr)
 	if err != nil {
@@ -85,7 +53,24 @@ func NewUDP(addr string, tunnel adapter.TransportHandler) (*UDPListener, error) 
 	return sl, nil
 }
 
-func handleSocksUDP(pc net.PacketConn, tunnel adapter.TransportHandler, buf []byte, put func(), addr net.Addr) {
+// RawAddress returns the raw address of the UDPListener
+func (l *UDPListener) RawAddress() string {
+	return l.addr
+}
+
+// RawAddress returns the address of the UDPListener
+func (l *UDPListener) Address() string {
+	return l.packetConn.LocalAddr().String()
+}
+
+// RawAddress closes the net.PacketConn underlying the UDPListener
+func (l *UDPListener) Close() error {
+	l.closed = true
+	return l.packetConn.Close()
+}
+
+func handleSocksUDP(pc net.PacketConn, tunnel adapter.TransportHandler, buf []byte, put func(),
+	addr net.Addr, options ...inbound.Option) {
 	target, payload, err := socks5.DecodeUDPPacket(buf)
 	if err != nil {
 		if put != nil {
@@ -99,5 +84,5 @@ func handleSocksUDP(pc net.PacketConn, tunnel adapter.TransportHandler, buf []by
 		payload: payload,
 		put:     put,
 	}
-	tunnel.HandleUDPPacket(inbound.NewPacket(target, packet, protos.Protocol_SOCKS5))
+	tunnel.HandleUDPPacket(inbound.NewPacket(target, packet, protos.Protocol_SOCKS5, options...))
 }

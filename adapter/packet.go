@@ -18,6 +18,10 @@ type UDPPacket interface {
 	LocalAddr() net.Addr
 }
 
+type UDPPacketInAddr interface {
+	InAddr() net.Addr
+}
+
 type packetAdapter struct {
 	UDPPacket
 	metadata *M.Metadata

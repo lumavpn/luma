@@ -3,7 +3,6 @@ package socks
 import (
 	"io"
 	"net"
-	"sync"
 
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/conn"
@@ -23,7 +22,6 @@ type Listener struct {
 	options  []inbound.Option
 	addr     string
 	closed   bool
-	mu       sync.Mutex
 }
 
 // New creates a new instance of Listener with the given inbound Options

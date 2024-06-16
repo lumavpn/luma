@@ -3,6 +3,8 @@ package protos
 import (
 	"errors"
 	"strings"
+
+	"github.com/lumavpn/luma/util"
 )
 
 func EncodeProto(s string) (Protocol, error) {
@@ -15,7 +17,7 @@ func EncodeProto(s string) (Protocol, error) {
 }
 
 func EncodeAdapterType(s string) (AdapterType, error) {
-	at, ok := AdapterType_value[strings.Title(s)]
+	at, ok := AdapterType_value[util.StringTitle(s)]
 	if !ok {
 		return AdapterType_AdapterType_Unset, errors.New("Unknown proxy adapter type")
 	}
