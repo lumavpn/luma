@@ -11,7 +11,6 @@ import (
 func TestSocks5ClientHandshake(t *testing.T) {
 	// Mock server responses
 	readBuffer := &bytes.Buffer{}
-	readBuffer.Write([]byte{Version, MethodUserPass})
 	readBuffer.Write([]byte{Version, 0x00 /* STATUS of SUCCESS */})
 	readBuffer.Write([]byte{Version, 0x00 /* STATUS of SUCCESS */, 0x00 /* RSV */})
 	readBuffer.Write([]byte{AtypIPv4, 0x1, 0x2, 0x3, 0x4, 0x0, 0x0 /* IPv4: 1.2.3.4:0 */})
