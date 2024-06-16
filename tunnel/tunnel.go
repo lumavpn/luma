@@ -1,19 +1,25 @@
 package tunnel
 
 import (
+	"net"
 	"runtime"
 
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/common/atomic"
+	"github.com/lumavpn/luma/conn"
+	M "github.com/lumavpn/luma/metadata"
 )
 
 type tunnel struct {
 	status   atomic.TypedValue[TunnelStatus]
 	tcpQueue chan adapter.TCPConn
-	udpQueue chan adapter.UDPConn
+	udpQueue chan adapter.PacketAdapter
 }
 
 type Tunnel interface {
+	HandleTCPConn(c net.Conn, metadata *M.Metadata)
+	HandleUDPPacket(packet adapter.UDPPacket, metadata *M.Metadata)
+
 	// SetStatus sets the current status of the Tunnel
 	SetStatus(s TunnelStatus)
 	// Status returns the current status of the Tunnel
@@ -25,10 +31,25 @@ func New() Tunnel {
 	t := &tunnel{
 		status:   atomic.NewTypedValue[TunnelStatus](Disconnected),
 		tcpQueue: make(chan adapter.TCPConn),
-		udpQueue: make(chan adapter.UDPConn),
+		udpQueue: make(chan adapter.PacketAdapter),
 	}
 	go t.process()
 	return t
+}
+
+func (t *tunnel) HandleTCPConn(c net.Conn, metadata *M.Metadata) {
+	connCtx, err := conn.NewConnContext(c, metadata)
+	if err == nil {
+		t.handleTCPConn(connCtx)
+	}
+}
+
+func (t *tunnel) HandleUDPPacket(packet adapter.UDPPacket, metadata *M.Metadata) {
+	packetAdapter := adapter.NewPacketAdapter(packet, metadata)
+	select {
+	case t.udpQueue <- packetAdapter:
+	default:
+	}
 }
 
 // TCPIn return fan-in TCP queue.
@@ -37,7 +58,7 @@ func (t *tunnel) TCPIn() chan<- adapter.TCPConn {
 }
 
 // UDPIn return fan-in UDP queue.
-func (t *tunnel) UDPIn() chan<- adapter.UDPConn {
+func (t *tunnel) UDPIn() chan<- adapter.PacketAdapter {
 	return t.udpQueue
 }
 

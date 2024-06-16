@@ -20,6 +20,8 @@ type Config struct {
 	LanAllowedIPs    []netip.Prefix `yaml:"lan-allowed-ips"`
 	LanDisAllowedIPs []netip.Prefix `yaml:"lan-disallowed-ips"`
 
+	SocksPort int `yaml:"socks-port"`
+
 	// Set firewall MARK (Linux only)
 	Mark      int              `yaml:"mark"`
 	Listeners []map[string]any `yaml:"listeners"`
