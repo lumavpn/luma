@@ -25,7 +25,7 @@ func NewDirect() *Direct {
 	}
 }
 
-// DialContext connects to the address on the named network provided by Metadata using the provided context
+// DialContext connects to the address on the network using the provided Metadata
 func (d *Direct) DialContext(ctx context.Context, metadata *M.Metadata) (net.Conn, error) {
 	c, err := dialer.DialContext(ctx, "tcp", metadata.DestinationAddress())
 	if err != nil {
