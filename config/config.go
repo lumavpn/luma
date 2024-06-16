@@ -13,6 +13,11 @@ import (
 
 type Config struct {
 	LogLevel log.LogLevel `yaml:"loglevel"`
+	// Use this interface when configuring the tunnel
+	Interface string `yaml:"interface-name"`
+	// Set firewall MARK (Linux only)
+	Mark    int              `yaml:"mark"`
+	Proxies []map[string]any `yaml:"proxies"`
 }
 
 // New returns a new instance of Config with default values

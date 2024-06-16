@@ -3,11 +3,23 @@ package outbound
 import "github.com/lumavpn/luma/proxy/protos"
 
 type Base struct {
-	name  string
-	addr  string
-	at    protos.AdapterType
-	proto protos.Protocol
-	udp   bool
+	name          string
+	addr          string
+	at            protos.AdapterType
+	interfaceName string
+	routingMark   int
+	proto         protos.Protocol
+	udp           bool
+}
+
+type BasicOptions struct {
+	Name        string
+	Addr        string
+	Protocol    protos.Protocol
+	Type        protos.AdapterType
+	UDP         bool
+	Interface   string
+	RoutingMark int
 }
 
 // Addr returns the address of the proxy

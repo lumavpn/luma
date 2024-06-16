@@ -25,6 +25,19 @@ func NewDirect() *Direct {
 	}
 }
 
+// NewDirectWithOptions returns a new instance of Direct configured with the given options
+func NewDirectWithOptions(opts BasicOptions) *Direct {
+	return &Direct{
+		Base: &Base{
+			interfaceName: opts.Interface,
+			routingMark:   opts.RoutingMark,
+			name:          opts.Name,
+			at:            protos.AdapterType_Direct,
+			udp:           true,
+		},
+	}
+}
+
 // DialContext connects to the address on the network using the provided Metadata
 func (d *Direct) DialContext(ctx context.Context, metadata *M.Metadata) (net.Conn, error) {
 	c, err := dialer.DialContext(ctx, "tcp", metadata.DestinationAddress())
