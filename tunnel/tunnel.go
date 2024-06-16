@@ -7,6 +7,7 @@ import (
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/common/atomic"
 	"github.com/lumavpn/luma/conn"
+	"github.com/lumavpn/luma/log"
 	M "github.com/lumavpn/luma/metadata"
 )
 
@@ -39,9 +40,11 @@ func New() Tunnel {
 
 func (t *tunnel) HandleTCPConn(c net.Conn, metadata *M.Metadata) {
 	connCtx, err := conn.NewConnContext(c, metadata)
-	if err == nil {
-		t.handleTCPConn(connCtx)
+	if err != nil {
+		log.Error(err)
+		return
 	}
+	t.handleTCPConn(connCtx)
 }
 
 func (t *tunnel) HandleUDPPacket(packet adapter.UDPPacket, metadata *M.Metadata) {
