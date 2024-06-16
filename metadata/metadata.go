@@ -22,6 +22,11 @@ type Metadata struct {
 
 	Type protos.Protocol `json:"proto"`
 
+	InName string     `json:"inboundName"`
+	InUser string     `json:"inboundUser"`
+	InIP   netip.Addr `json:"inboundIP"`
+	InPort uint16     `json:"inboundPort,string"`
+
 	RawSrcAddr net.Addr `json:"-"`
 	RawDstAddr net.Addr `json:"-"`
 }
@@ -43,4 +48,51 @@ func (m *Metadata) UDPAddr() *net.UDPAddr {
 		return nil
 	}
 	return net.UDPAddrFromAddrPort(m.AddrPort())
+}
+
+// SetRemoteAddr updates the destination address to be the same as the given net.Addr
+func (m *Metadata) SetRemoteAddr(addr net.Addr) error {
+	if addr == nil {
+		return nil
+	}
+	if rawAddr, ok := addr.(interface{ RawAddr() net.Addr }); ok {
+		if rawAddr := rawAddr.RawAddr(); rawAddr != nil {
+			if err := m.SetRemoteAddr(rawAddr); err == nil {
+				return nil
+			}
+		}
+	}
+	if addr, ok := addr.(interface{ AddrPort() netip.AddrPort }); ok {
+		if addrPort := addr.AddrPort(); addrPort.Port() != 0 {
+			m.DstPort = addrPort.Port()
+			if addrPort.IsValid() {
+				m.DstIP = addrPort.Addr().Unmap()
+				return nil
+			}
+		}
+	}
+	return m.SetRemoteAddress(addr.String())
+}
+
+func (m *Metadata) SetRemoteAddress(rawAddress string) error {
+	host, port, err := net.SplitHostPort(rawAddress)
+	if err != nil {
+		return err
+	}
+
+	var uint16Port uint16
+	if port, err := strconv.ParseUint(port, 10, 16); err == nil {
+		uint16Port = uint16(port)
+	}
+
+	if ip, err := netip.ParseAddr(host); err != nil {
+		m.Host = host
+		m.DstIP = netip.Addr{}
+	} else {
+		m.Host = ""
+		m.DstIP = ip.Unmap()
+	}
+	m.DstPort = uint16Port
+
+	return nil
 }
