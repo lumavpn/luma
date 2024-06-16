@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/lumavpn/luma/config"
+	"github.com/lumavpn/luma/ipfilter"
 	"github.com/lumavpn/luma/listener/inbound"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/proxy"
@@ -27,6 +28,13 @@ func New(cfg *config.Config) *Luma {
 	}
 }
 
+// applyConfig applies the given Config to the instance of Luma to complete setup
+func applyConfig(cfg *config.Config) error {
+	ipfilter.SetAllowedIPs(cfg.LanAllowedIPs)
+	ipfilter.SetDisAllowedIPs(cfg.LanDisAllowedIPs)
+	return nil
+}
+
 // Start starts the default engine running Luma. If there is any issue with the setup process, an error is returned
 func (lu *Luma) Start(ctx context.Context) error {
 	log.Debug("Starting new instance")
@@ -43,7 +51,8 @@ func (lu *Luma) Start(ctx context.Context) error {
 	lu.listeners = listeners
 	lu.proxies = proxies
 	lu.mu.Unlock()
-	return nil
+
+	return applyConfig(cfg)
 }
 
 // Stop stops running the Luma engine

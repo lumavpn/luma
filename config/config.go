@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/netip"
 	"os"
 	"path/filepath"
 
@@ -15,6 +16,10 @@ type Config struct {
 	LogLevel log.LogLevel `yaml:"loglevel"`
 	// Use this interface when configuring the tunnel
 	Interface string `yaml:"interface-name"`
+
+	LanAllowedIPs    []netip.Prefix `yaml:"lan-allowed-ips"`
+	LanDisAllowedIPs []netip.Prefix `yaml:"lan-disallowed-ips"`
+
 	// Set firewall MARK (Linux only)
 	Mark      int              `yaml:"mark"`
 	Listeners []map[string]any `yaml:"listeners"`
