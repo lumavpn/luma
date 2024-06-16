@@ -16,8 +16,9 @@ type Config struct {
 	// Use this interface when configuring the tunnel
 	Interface string `yaml:"interface-name"`
 	// Set firewall MARK (Linux only)
-	Mark    int              `yaml:"mark"`
-	Proxies []map[string]any `yaml:"proxies"`
+	Mark      int              `yaml:"mark"`
+	Listeners []map[string]any `yaml:"listeners"`
+	Proxies   []map[string]any `yaml:"proxies"`
 }
 
 // New returns a new instance of Config with default values

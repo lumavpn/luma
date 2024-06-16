@@ -1,6 +1,8 @@
 package adapter
 
 import (
+	"net"
+
 	M "github.com/lumavpn/luma/metadata"
 )
 
@@ -11,6 +13,9 @@ type UDPPacket interface {
 
 	// Drop is called after a packet is used and no longer needed
 	Drop()
+
+	// LocalAddr returns the source IP/Port of packet
+	LocalAddr() net.Addr
 }
 
 type packetAdapter struct {

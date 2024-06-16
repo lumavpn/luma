@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/lumavpn/luma/config"
+	"github.com/lumavpn/luma/listener"
+	"github.com/lumavpn/luma/listener/inbound"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/adapter"
@@ -31,4 +33,22 @@ func parseProxies(cfg *config.Config) (map[string]proxy.Proxy, error) {
 	}
 
 	return proxies, nil
+}
+
+// parseListeners returns a map of listeners this instance of Luma is configured with
+func parseListeners(cfg *config.Config) (listeners map[string]inbound.InboundListener, err error) {
+	listeners = make(map[string]inbound.InboundListener)
+	for index, mapping := range cfg.Listeners {
+		listener, err := listener.ParseListener(mapping)
+		if err != nil {
+			return nil, fmt.Errorf("proxy %d: %w", index, err)
+		}
+
+		if _, exist := mapping[listener.Name()]; exist {
+			return nil, fmt.Errorf("listener %s is the duplicate name", listener.Name())
+		}
+
+		listeners[listener.Name()] = listener
+	}
+	return
 }
