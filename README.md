@@ -56,3 +56,4 @@ luma -config config.yaml -proxy socks5://host:port -interface en0
 - [v2ray/v2ray-core](https://github.com/v2ray/v2ray-core)
 - [google/gvisor](https://github.com/google/gvisor)
 - [xjasonlyu/tun2socks](https://github.com/xjasonlyu/tun2socks)
+- [Dreamacro/clash](https://github.com/Dreamacro/clash)
