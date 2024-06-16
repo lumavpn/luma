@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/zhangyunhao116/fastrand"
 )
 
@@ -35,7 +36,8 @@ func TestAllocPut(t *testing.T) {
 func TestAllocPutThenGet(t *testing.T) {
 	alloc := NewAllocator()
 	data := alloc.Get(4)
-	alloc.Put(data)
+	err := alloc.Put(data)
+	require.NoError(t, err)
 	newData := alloc.Get(4)
 
 	assert.Equal(t, cap(data), cap(newData), "different cap while alloc.Get()")

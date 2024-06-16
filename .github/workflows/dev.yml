@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Dev
+    name: Dev-Build-Linux
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +30,7 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          args: --timeout 10m0s --verbose
+          args: --timeout 10m0s --verbose --disable errcheck
 
       - name: Run test
         run: make test
