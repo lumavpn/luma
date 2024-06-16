@@ -7,18 +7,21 @@ import (
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/proxy"
+	"github.com/lumavpn/luma/tunnel"
 )
 
 type Luma struct {
 	config  *config.Config
 	proxies map[string]proxy.Proxy
 	mu      sync.Mutex
+	tunnel  tunnel.Tunnel
 }
 
 // New creates a new instance of Luma
 func New(cfg *config.Config) *Luma {
 	return &Luma{
 		config: cfg,
+		tunnel: tunnel.New(),
 	}
 }
 
