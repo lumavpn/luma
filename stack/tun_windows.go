@@ -24,7 +24,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-var TunnelType = "sing-tun"
+var TunnelType = "luma-tun"
 
 type NativeTun struct {
 	adapter     *wintun.Adapter

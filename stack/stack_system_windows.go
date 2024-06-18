@@ -13,7 +13,7 @@ func fixWindowsFirewall() error {
 		return err
 	}
 	rule := winfw.FWRule{
-		Name:            "sing-tun (" + absPath + ")",
+		Name:            "luma-tun (" + absPath + ")",
 		ApplicationName: absPath,
 		Enabled:         true,
 		Protocol:        winfw.NET_FW_IP_PROTOCOL_TCP,
