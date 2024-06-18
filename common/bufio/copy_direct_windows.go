@@ -7,7 +7,6 @@ import (
 	"syscall"
 	"unsafe"
 
-	E "github.com/lumavpn/luma/common/errors"
 	M "github.com/lumavpn/luma/common/metadata"
 	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
@@ -100,7 +99,7 @@ func (w *syscallReadWaiter) WaitReadBuffer() (buffer *pool.Buffer, err error) {
 		if w.readErr == io.EOF {
 			return nil, io.EOF
 		}
-		return nil, E.Cause(w.readErr, "raw read")
+		return nil, w.readErr
 	}
 	buffer = w.buffer
 	w.buffer = nil

@@ -77,6 +77,15 @@ func With(data []byte) *Buffer {
 		capacity: len(data),
 	}
 }
+
+func (b *Buffer) ExtendHeader(n int) []byte {
+	if b.start < n {
+		log.Fatal("buffer overflow: capacity ", b.capacity, ",start ", b.start, ", need ", n)
+	}
+	b.start -= n
+	return b.data[b.start : b.start+n]
+}
+
 func (b *Buffer) Byte(index int) byte {
 	return b.data[b.start+index]
 }

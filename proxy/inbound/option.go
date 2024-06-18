@@ -36,6 +36,12 @@ func WithInAddr(addr net.Addr) Option {
 	}
 }
 
+func WithDstAddr(addr net.Addr) Option {
+	return func(metadata *M.Metadata) {
+		_ = metadata.SetRemoteAddr(addr)
+	}
+}
+
 func WithSrcAddr(addr net.Addr) Option {
 	return func(metadata *M.Metadata) {
 		m := M.Metadata{}

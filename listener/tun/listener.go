@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/config"
@@ -17,17 +16,6 @@ import (
 	"github.com/lumavpn/luma/stack"
 	"github.com/lumavpn/luma/util"
 )
-
-type ListenerConfig struct {
-	Tunnel     adapter.TransportHandler
-	Type       protos.Protocol
-	Additions  []inbound.Option
-	UDPTimeout time.Duration
-}
-
-type ListenerHandler struct {
-	ListenerConfig
-}
 
 type Listener struct {
 	closed  bool
