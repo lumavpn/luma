@@ -17,3 +17,9 @@ func PutBuffer(buf *bytes.Buffer) {
 }
 
 type Buffer = bytes.Buffer
+
+func NewSize(n int) *bytes.Buffer {
+	b := new(bytes.Buffer)
+	b.Grow(n)
+	return b
+}

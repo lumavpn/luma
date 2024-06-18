@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"io"
 	"regexp"
 	"strconv"
 
@@ -59,31 +58,4 @@ func StringToBps(s string) uint64 {
 		n /= 8
 	}
 	return n
-}
-
-func ReadByte(reader io.Reader) (byte, error) {
-	if br, isBr := reader.(io.ByteReader); isBr {
-		return br.ReadByte()
-	}
-	var b [1]byte
-	if _, err := io.ReadFull(reader, b[:]); err != nil {
-		return 0, err
-	}
-	return b[0], nil
-}
-
-func ReadBytes(reader io.Reader, size int) ([]byte, error) {
-	b := make([]byte, size)
-	if _, err := io.ReadFull(reader, b); err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-func ReadString(reader io.Reader, size int) (string, error) {
-	b, err := ReadBytes(reader, size)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
 }
