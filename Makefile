@@ -22,6 +22,9 @@ luma:
 	cd cmd/luma; \
 	$(GO_BUILD) -o ../../$(BUILD_DIR)/luma
 
+luma-with-gvisor: BUILD_TAGS += with_gvisor
+luma-with-gvisor: luma
+
 test:
 	$(GO) test -v ./...
 
