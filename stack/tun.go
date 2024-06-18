@@ -31,6 +31,20 @@ type Tun interface {
 	Close() error
 }
 
+type WinTun interface {
+	Tun
+	ReadPacket() ([]byte, func(), error)
+}
+
+type LinuxTUN interface {
+	Tun
+	network.FrontHeadroom
+	BatchSize() int
+	BatchRead(buffers [][]byte, offset int, readN []int) (n int, err error)
+	BatchWrite(buffers [][]byte, offset int) error
+	TXChecksumOffload() bool
+}
+
 type Options struct {
 	FileDescriptor int
 	Name           string

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+
+	"github.com/lumavpn/luma/common/control"
 )
 
 type Stack interface {
@@ -20,6 +22,9 @@ type Config struct {
 	Tun                    Tun
 	TunOptions             Options
 	UDPTimeout             int64
+	ForwarderBindInterface bool
+	IncludeAllNetworks     bool
+	InterfaceFinder        control.InterfaceFinder
 }
 
 // NewStack creates a new instance of Stack with the given options
