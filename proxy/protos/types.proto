@@ -7,6 +7,7 @@ enum Protocol {
   HTTPS = 2;
   SOCKS4 = 3;
   SOCKS5 = 4;
+  TUN = 5;
 }
 
 enum AdapterType {

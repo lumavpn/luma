@@ -26,6 +26,9 @@ type Config struct {
 	Mark      int              `yaml:"mark"`
 	Listeners []map[string]any `yaml:"listeners"`
 	Proxies   []map[string]any `yaml:"proxies"`
+
+	// Tunnel config
+	Tun Tun `yaml:"tun"`
 }
 
 // New returns a new instance of Config with default values
