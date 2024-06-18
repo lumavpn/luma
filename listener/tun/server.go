@@ -3,6 +3,7 @@ package tun
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/netip"
 	"runtime"
 	"strconv"
@@ -18,6 +19,8 @@ import (
 	"github.com/lumavpn/luma/util"
 )
 
+const InterfaceName = "luma"
+
 type Listener struct {
 	closed  bool
 	config  *config.Tun
@@ -27,6 +30,32 @@ type Listener struct {
 
 	tunIf stack.Tun
 	stack stack.Stack
+}
+
+func CalculateInterfaceName(name string) (tunName string) {
+	if runtime.GOOS == "darwin" {
+		tunName = "utun"
+	} else if name != "" {
+		tunName = name
+		return
+	} else {
+		tunName = "tun"
+	}
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return
+	}
+	var tunIndex int
+	for _, netInterface := range interfaces {
+		if strings.HasPrefix(netInterface.Name, tunName) {
+			index, parseErr := strconv.ParseInt(netInterface.Name[len(tunName):], 10, 16)
+			if parseErr == nil {
+				tunIndex = int(index) + 1
+			}
+		}
+	}
+	tunName = util.ToString(tunName, tunIndex)
+	return
 }
 
 func checkTunName(tunName string) (ok bool) {
@@ -45,7 +74,7 @@ func checkTunName(tunName string) (ok bool) {
 }
 
 // New creates a new instance of Listener with the given config and options
-func New(cfg *config.Tun, interfaceName string, tunnel adapter.TransportHandler, options ...inbound.Option) (*Listener, error) {
+func New(cfg *config.Tun, tunnel adapter.TransportHandler, options ...inbound.Option) (*Listener, error) {
 	if len(options) == 0 {
 		options = []inbound.Option{
 			inbound.WithInName("default-tun"),
@@ -53,7 +82,7 @@ func New(cfg *config.Tun, interfaceName string, tunnel adapter.TransportHandler,
 	}
 	tunName := cfg.Device
 	if tunName == "" || !checkTunName(tunName) {
-		tunName = util.CalculateInterfaceName(interfaceName)
+		tunName = CalculateInterfaceName(InterfaceName)
 		log.Debugf("Setting tun device name to %s", tunName)
 		cfg.Device = tunName
 	}

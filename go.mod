@@ -5,9 +5,13 @@ go 1.22.3
 require (
 	github.com/database64128/tfo-go/v2 v2.2.1
 	github.com/gofrs/uuid/v5 v5.2.0
+	github.com/hashicorp/yamux v0.1.1
+	github.com/miekg/dns v1.1.61
 	github.com/mitchellh/mapstructure v1.5.0
+	github.com/samber/lo v1.39.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
+	github.com/xtaci/smux v1.5.24
 	github.com/zhangyunhao116/fastrand v0.5.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/automaxprocs v1.5.3
@@ -22,13 +26,8 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/btree v1.1.2 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/miekg/dns v1.1.61 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/samber/lo v1.39.0 // indirect
-	github.com/xtaci/smux v1.5.24 // indirect
 	golang.org/x/exp v0.0.0-20230725093048-515e97ebf090 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect

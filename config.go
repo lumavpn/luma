@@ -2,6 +2,7 @@ package luma
 
 import (
 	"fmt"
+	"net/netip"
 
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/listener"
@@ -11,6 +12,7 @@ import (
 	"github.com/lumavpn/luma/proxy/adapter"
 	"github.com/lumavpn/luma/proxy/outbound"
 	"github.com/lumavpn/luma/proxy/protos"
+	"github.com/lumavpn/luma/tunnel"
 )
 
 // parseProxies returns a map of proxies that are present in the config
@@ -51,4 +53,27 @@ func parseListeners(cfg *config.Config) (listeners map[string]inbound.InboundLis
 		listeners[listener.Name()] = listener
 	}
 	return
+}
+
+func parseTun(cfg *config.Config, t tunnel.Tunnel) (*config.Tun, error) {
+	rawTun := cfg.Tun
+	tunAddressPrefix := t.FakeIPRange()
+	if !tunAddressPrefix.IsValid() {
+		tunAddressPrefix = netip.MustParsePrefix("198.18.0.1/16")
+	}
+	tunAddressPrefix = netip.PrefixFrom(tunAddressPrefix.Addr(), 30)
+
+	if !cfg.IPv6 || !verifyIP6() {
+		rawTun.Inet6Address = nil
+	}
+
+	tc := &config.Tun{
+		Enable:              rawTun.Enable,
+		Device:              rawTun.Device,
+		Stack:               rawTun.Stack,
+		DNSHijack:           rawTun.DNSHijack,
+		AutoRoute:           rawTun.AutoRoute,
+		AutoDetectInterface: rawTun.AutoDetectInterface,
+	}
+	return tc, nil
 }

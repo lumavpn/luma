@@ -9,6 +9,7 @@ import (
 	"github.com/lumavpn/luma/ipfilter"
 	"github.com/lumavpn/luma/listener/inbound"
 	"github.com/lumavpn/luma/listener/socks"
+	"github.com/lumavpn/luma/listener/tun"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/tunnel"
@@ -19,9 +20,11 @@ type Luma struct {
 
 	proxies map[string]proxy.Proxy
 
-	listeners        map[string]inbound.InboundListener
+	listeners map[string]inbound.InboundListener
+
 	socksListener    *socks.Listener
 	socksUDPListener *socks.UDPListener
+	tunListener      *tun.Listener
 
 	mu     sync.Mutex
 	tunnel tunnel.Tunnel
@@ -57,11 +60,32 @@ func (lu *Luma) setupLocalSocks(cfg *config.Config) error {
 	return nil
 }
 
+func (lu *Luma) setupTun(cfg *config.Tun) error {
+	listener, err := tun.New(cfg, lu.tunnel)
+	if err != nil {
+		return err
+	}
+	lu.mu.Lock()
+	lu.tunListener = listener
+	lu.mu.Unlock()
+	return nil
+}
+
 // applyConfig applies the given Config to the instance of Luma to complete setup
 func (lu *Luma) applyConfig(cfg *config.Config) error {
 	ipfilter.SetAllowedIPs(cfg.LanAllowedIPs)
 	ipfilter.SetDisAllowedIPs(cfg.LanDisAllowedIPs)
-	return lu.setupLocalSocks(cfg)
+	if err := lu.setupLocalSocks(cfg); err != nil {
+		return err
+	}
+	tunConfig, err := parseTun(cfg, lu.tunnel)
+	if err != nil {
+		return err
+	}
+	if err := lu.setupTun(tunConfig); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Start starts the default engine running Luma. If there is any issue with the setup process, an error is returned

@@ -28,6 +28,10 @@ Create a `config.yaml` configuration file, and put it in same directory as the l
 
 ```yaml
 loglevel: debug
+listeners:
+  - name: local-socks
+    type: socks
+    port: 10808
 ```
 
 ## Installation
@@ -57,3 +61,4 @@ luma -config config.yaml -proxy socks5://host:port -interface en0
 - [google/gvisor](https://github.com/google/gvisor)
 - [xjasonlyu/tun2socks](https://github.com/xjasonlyu/tun2socks)
 - [Dreamacro/clash](https://github.com/Dreamacro/clash)
+- [sagernet/sing-tun](https://github.com/sagernet/sing-tun)

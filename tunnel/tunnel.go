@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"net"
+	"net/netip"
 	"runtime"
 
 	"github.com/lumavpn/luma/adapter"
@@ -12,12 +13,16 @@ import (
 )
 
 type tunnel struct {
-	status   atomic.TypedValue[TunnelStatus]
-	tcpQueue chan adapter.TCPConn
-	udpQueue chan adapter.PacketAdapter
+	fakeIPRange netip.Prefix
+	status      atomic.TypedValue[TunnelStatus]
+	tcpQueue    chan adapter.TCPConn
+	udpQueue    chan adapter.PacketAdapter
 }
 
 type Tunnel interface {
+	FakeIPRange() netip.Prefix
+	SetFakeIPRange(p netip.Prefix)
+
 	HandleTCPConn(c net.Conn, metadata *M.Metadata)
 	HandleUDPPacket(packet adapter.UDPPacket, metadata *M.Metadata)
 
@@ -53,6 +58,14 @@ func (t *tunnel) HandleUDPPacket(packet adapter.UDPPacket, metadata *M.Metadata)
 	case t.udpQueue <- packetAdapter:
 	default:
 	}
+}
+
+func (t *tunnel) SetFakeIPRange(p netip.Prefix) {
+	t.fakeIPRange = p
+}
+
+func (t *tunnel) FakeIPRange() netip.Prefix {
+	return t.fakeIPRange
 }
 
 // TCPIn return fan-in TCP queue.

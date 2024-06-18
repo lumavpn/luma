@@ -13,7 +13,9 @@ import (
 )
 
 type Config struct {
+	// General configuration
 	LogLevel log.LogLevel `yaml:"loglevel"`
+	IPv6     bool         `json:"ipv6" yaml:"ipv6"`
 	// Use this interface when configuring the tunnel
 	Interface string `yaml:"interface-name"`
 
