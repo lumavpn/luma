@@ -1,15 +1,25 @@
 package stack
 
 import (
+	"context"
 	"io"
+	"net"
 	"net/netip"
 
-	"github.com/lumavpn/luma/adapter"
+	M "github.com/lumavpn/luma/common/metadata"
 )
 
+type TCPConnectionHandler interface {
+	NewConnection(ctx context.Context, conn net.Conn, metadata M.Metadata) error
+}
+
+type UDPConnectionHandler interface {
+	NewPacketConnection(ctx context.Context, conn net.PacketConn, metadata M.Metadata) error
+}
+
 type Handler interface {
-	adapter.TCPConnectionHandler
-	adapter.UDPConnectionHandler
+	TCPConnectionHandler
+	UDPConnectionHandler
 }
 
 type Tun interface {
