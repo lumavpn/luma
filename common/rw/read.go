@@ -1,6 +1,7 @@
 package rw
 
 import (
+	"encoding/binary"
 	"io"
 )
 
@@ -38,4 +39,31 @@ func ReadString(reader io.Reader, size int) (string, error) {
 		return "", err
 	}
 	return string(b), nil
+}
+
+type stubByteReader struct {
+	io.Reader
+}
+
+func (r stubByteReader) ReadByte() (byte, error) {
+	return ReadByte(r.Reader)
+}
+
+func ToByteReader(reader io.Reader) io.ByteReader {
+	if byteReader, ok := reader.(io.ByteReader); ok {
+		return byteReader
+	}
+	return &stubByteReader{reader}
+}
+
+func ReadVString(reader io.Reader) (string, error) {
+	length, err := binary.ReadUvarint(ToByteReader(reader))
+	if err != nil {
+		return "", err
+	}
+	value, err := ReadBytes(reader, int(length))
+	if err != nil {
+		return "", err
+	}
+	return string(value), nil
 }

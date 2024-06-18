@@ -21,7 +21,7 @@ func (discard) WriteString(s string) (int, error) {
 }
 
 func (discard) ReadFrom(r io.Reader) (n int64, err error) {
-	buffer := pool.Get(pool.RelayBufferSize)
+	buffer := pool.Get(pool.BufferSize)
 	readSize := 0
 	for {
 		readSize, err = r.Read(buffer)

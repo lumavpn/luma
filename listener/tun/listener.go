@@ -7,10 +7,10 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/config"
-	"github.com/lumavpn/luma/listener/mux"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/proxy/inbound"
 	"github.com/lumavpn/luma/proxy/protos"
@@ -18,10 +18,21 @@ import (
 	"github.com/lumavpn/luma/util"
 )
 
+type ListenerConfig struct {
+	Tunnel     adapter.TransportHandler
+	Type       protos.Protocol
+	Additions  []inbound.Option
+	UDPTimeout time.Duration
+}
+
+type ListenerHandler struct {
+	ListenerConfig
+}
+
 type Listener struct {
 	closed  bool
 	config  *config.Tun
-	handler *mux.ListenerHandler
+	handler *ListenerHandler
 	tunName string
 	addrStr string
 
@@ -86,10 +97,11 @@ func New(cfg *config.Tun, interfaceName string, tunnel adapter.TransportHandler,
 		dnsServerIp = append(dnsServerIp, a.Addr().Next().String())
 		dnsAdds = append(dnsAdds, addrPort)
 	}
-	h, err := mux.NewListenerHandler(mux.ListenerConfig{
-		Tunnel:  tunnel,
-		Type:    protos.Protocol_TUN,
-		Options: options,
+
+	h, err := NewListenerHandler(ListenerConfig{
+		Tunnel:    tunnel,
+		Type:      protos.Protocol_TUN,
+		Additions: options,
 	})
 	if err != nil {
 		return nil, err
@@ -123,13 +135,13 @@ func New(cfg *config.Tun, interfaceName string, tunnel adapter.TransportHandler,
 	log.Debug("Creating new stack..")
 	tunStack, err := stack.NewStack(stackOptions)
 	if err != nil {
-		return
+		return nil, err
 	}
 	log.Debug("Starting stack..")
 	err = tunStack.Start(context.Background())
 	if err != nil {
-		return
+		return nil, err
 	}
-	l.tunStack = tunStack
+	l.stack = tunStack
 	return l, nil
 }

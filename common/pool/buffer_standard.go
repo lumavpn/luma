@@ -3,7 +3,7 @@
 package pool
 
 const (
-	RelayBufferSize = 20 * 1024
+	BufferSize = 32 * 1024
 
 	UDPBufferSize = 16 * 1024
 )

@@ -4,7 +4,7 @@ import (
 	"context"
 	"net"
 
-	M "github.com/lumavpn/luma/metadata"
+	M "github.com/lumavpn/luma/common/metadata"
 )
 
 type TransportHandler interface {

@@ -1,7 +1,6 @@
 package metadata
 
 import (
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -9,7 +8,7 @@ import (
 	"net/netip"
 
 	"github.com/lumavpn/luma/common/pool"
-	"github.com/sagernet/sing/common/rw"
+	"github.com/lumavpn/luma/common/rw"
 )
 
 const (
@@ -49,7 +48,7 @@ func NewSerializer(options ...SerializerOption) *Serializer {
 	return s
 }
 
-func (s *Serializer) WriteAddress(buffer *bytes.Buffer, addr Socksaddr) error {
+func (s *Serializer) WriteAddress(buffer *pool.Buffer, addr Socksaddr) error {
 	var af Family
 	if !addr.IsValid() {
 		af = AddressFamilyEmpty
@@ -94,10 +93,10 @@ func (s *Serializer) WritePort(writer io.Writer, port uint16) error {
 }
 
 func (s *Serializer) WriteAddrPort(writer io.Writer, destination Socksaddr) error {
-	buffer, isBuffer := writer.(*bytes.Buffer)
+	buffer, isBuffer := writer.(*pool.Buffer)
 	if !isBuffer {
 		buffer = pool.NewSize(s.AddrPortLen(destination))
-		defer buffer.Reset()
+		defer buffer.Release()
 	}
 	var err error
 	if !s.portFirst {
@@ -117,7 +116,7 @@ func (s *Serializer) WriteAddrPort(writer io.Writer, destination Socksaddr) erro
 		return err
 	}
 	if !isBuffer {
-		_, err = writer.Write(buffer.Bytes())
+		err = rw.WriteBytes(writer, buffer.Bytes())
 	}
 	return err
 }
@@ -203,7 +202,7 @@ func ReadSockString(reader io.Reader) (string, error) {
 	return rw.ReadString(reader, int(strLen))
 }
 
-func WriteSocksString(buffer *bytes.Buffer, str string) error {
+func WriteSocksString(buffer *pool.Buffer, str string) error {
 	strLen := len(str)
 	if strLen > 255 {
 		return errors.New("fqdn too long")
