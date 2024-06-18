@@ -1,6 +1,9 @@
 package util
 
-import "io"
+import (
+	"context"
+	"io"
+)
 
 func DefaultValue[T any]() T {
 	var defaultValue T
@@ -51,6 +54,23 @@ func Map[T any, N any](arr []T, block func(it T) N) []N {
 		retArr = append(retArr, block(arr[index]))
 	}
 	return retArr
+}
+
+func Done(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
+
+func Must(errs ...error) {
+	for _, err := range errs {
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func UniqBy[T any, C comparable](arr []T, block func(it T) C) []T {

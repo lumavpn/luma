@@ -6,7 +6,9 @@ import (
 	"net"
 	"net/netip"
 
+	"github.com/lumavpn/luma/common/errors"
 	M "github.com/lumavpn/luma/common/metadata"
+	"github.com/lumavpn/luma/common/network"
 )
 
 type TCPConnectionHandler interface {
@@ -14,16 +16,18 @@ type TCPConnectionHandler interface {
 }
 
 type UDPConnectionHandler interface {
-	NewPacketConnection(ctx context.Context, conn net.PacketConn, metadata M.Metadata) error
+	NewPacketConnection(ctx context.Context, conn network.PacketConn, metadata M.Metadata) error
 }
 
 type Handler interface {
 	TCPConnectionHandler
 	UDPConnectionHandler
+	errors.ErrorHandler
 }
 
 type Tun interface {
 	io.ReadWriter
+	network.VectorisedWriter
 	Close() error
 }
 

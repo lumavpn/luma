@@ -138,6 +138,24 @@ func (b *Buffer) Read(data []byte) (n int, err error) {
 	return
 }
 
+func (b *Buffer) ReadFullFrom(r io.Reader, size int) (n int, err error) {
+	if b.end+size > b.capacity {
+		return 0, io.ErrShortBuffer
+	}
+	n, err = io.ReadFull(r, b.data[b.end:b.end+size])
+	b.end += n
+	return
+}
+
+func (b *Buffer) ReadOnceFrom(r io.Reader) (int, error) {
+	if b.IsFull() {
+		return 0, io.ErrShortBuffer
+	}
+	n, err := r.Read(b.FreeBytes())
+	b.end += n
+	return n, err
+}
+
 func (b *Buffer) ReadPacketFrom(r net.PacketConn) (int64, net.Addr, error) {
 	if b.IsFull() {
 		return 0, nil, io.ErrShortBuffer

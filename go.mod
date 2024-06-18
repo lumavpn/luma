@@ -11,7 +11,7 @@ require (
 	github.com/zhangyunhao116/fastrand v0.5.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/automaxprocs v1.5.3
-	golang.org/x/net v0.20.0
+	golang.org/x/net v0.26.0
 	golang.org/x/sys v0.21.0
 	golang.org/x/text v0.16.0
 	google.golang.org/protobuf v1.34.2
@@ -23,7 +23,15 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
+	github.com/miekg/dns v1.1.61 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/samber/lo v1.39.0 // indirect
+	github.com/xtaci/smux v1.5.24 // indirect
+	golang.org/x/exp v0.0.0-20230725093048-515e97ebf090 // indirect
+	golang.org/x/mod v0.18.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
+	golang.org/x/tools v0.22.0 // indirect
 )

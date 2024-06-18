@@ -22,3 +22,13 @@ func Cast[T any](obj any) (T, bool) {
 	}
 	return DefaultValue[T](), false
 }
+
+func Top(obj any) any {
+	if u, ok := obj.(WithUpstream); ok {
+		return Top(u.Upstream())
+	}
+	if u, ok := obj.(stdWithUpstreamNetConn); ok {
+		return Top(u.NetConn())
+	}
+	return obj
+}

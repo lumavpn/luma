@@ -79,10 +79,6 @@ func (h *ListenerHandler) NewConnection(ctx context.Context, conn net.Conn, meta
 		return h.ParseSpecialFqdn(ctx, conn, metadata)
 	}
 
-	/*if deadline.NeedAdditionalReadDeadline(conn) {
-		conn = N.NewDeadlineConn(conn) // conn from sing should check NeedAdditionalReadDeadline
-	}*/
-
 	cMetadata := &C.Metadata{
 		Network: C.TCP,
 		Type:    h.Type,
@@ -91,7 +87,7 @@ func (h *ListenerHandler) NewConnection(ctx context.Context, conn net.Conn, meta
 	inbound.WithOptions(cMetadata, getOptions(ctx)...)
 	inbound.WithOptions(cMetadata, h.Options...)
 
-	h.Tunnel.HandleTCPConn(conn, cMetadata) // this goroutine must exit after conn unused
+	h.Tunnel.HandleTCPConn(conn, cMetadata)
 	return nil
 }
 
