@@ -213,6 +213,10 @@ func (b *Buffer) IsFull() bool {
 	return b.end == b.capacity
 }
 
+func (b *Buffer) Advance(from int) {
+	b.start += from
+}
+
 func (b *Buffer) Truncate(to int) {
 	b.end = b.start + to
 }
@@ -258,4 +262,13 @@ func (b *Buffer) Extend(n int) []byte {
 	ext := b.data[b.end:end]
 	b.end = end
 	return ext
+}
+
+func (b *Buffer) ToOwned() *Buffer {
+	n := NewSize(len(b.data))
+	copy(n.data[b.start:b.end], b.data[b.start:b.end])
+	n.start = b.start
+	n.end = b.end
+	n.capacity = b.capacity
+	return n
 }
