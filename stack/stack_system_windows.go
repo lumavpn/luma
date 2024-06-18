@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/breakfreesoftware/luma/stack/internal/winfw"
+	"github.com/lumavpn/luma/stack/internal/winfw"
 )
 
 func fixWindowsFirewall() error {

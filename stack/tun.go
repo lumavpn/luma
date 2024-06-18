@@ -11,6 +11,18 @@ import (
 	"github.com/lumavpn/luma/common/network"
 )
 
+type Options struct {
+	FileDescriptor int
+	Name           string
+	Inet4Address   []netip.Prefix
+	Inet6Address   []netip.Prefix
+	MTU            uint32
+	AutoRoute      bool
+	StrictRoute    bool
+	IncludePackage []string
+	ExcludePackage []string
+}
+
 type TCPConnectionHandler interface {
 	NewConnection(ctx context.Context, conn net.Conn, metadata M.Metadata) error
 }
@@ -43,12 +55,4 @@ type LinuxTUN interface {
 	BatchRead(buffers [][]byte, offset int, readN []int) (n int, err error)
 	BatchWrite(buffers [][]byte, offset int) error
 	TXChecksumOffload() bool
-}
-
-type Options struct {
-	FileDescriptor int
-	Name           string
-	Inet4Address   []netip.Prefix
-	Inet6Address   []netip.Prefix
-	MTU            uint32
 }

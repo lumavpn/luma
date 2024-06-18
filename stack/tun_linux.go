@@ -11,17 +11,17 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/breakfreesoftware/luma/common/buf"
-	"github.com/breakfreesoftware/luma/common/bufio"
-	E "github.com/breakfreesoftware/luma/common/errors"
-	"github.com/breakfreesoftware/luma/common/generics/list"
-	N "github.com/breakfreesoftware/luma/common/network"
-	"github.com/breakfreesoftware/luma/common/rw"
-	"github.com/breakfreesoftware/luma/common/shell"
-	"github.com/breakfreesoftware/luma/log"
-	"github.com/breakfreesoftware/luma/stack/monitor"
-	"github.com/breakfreesoftware/luma/util"
-	"github.com/breakfreesoftware/netlink"
+	"github.com/lumavpn/luma/common/bufio"
+	E "github.com/lumavpn/luma/common/errors"
+	"github.com/lumavpn/luma/common/generics/list"
+	N "github.com/lumavpn/luma/common/network"
+	"github.com/lumavpn/luma/common/pool"
+	"github.com/lumavpn/luma/common/rw"
+	"github.com/lumavpn/luma/common/shell"
+	"github.com/lumavpn/luma/log"
+	"github.com/lumavpn/luma/stack/monitor"
+	"github.com/lumavpn/luma/util"
+	"github.com/lumavpn/netlink"
 	"golang.org/x/sys/unix"
 )
 
@@ -119,12 +119,12 @@ func (t *NativeTun) Write(p []byte) (n int, err error) {
 	return t.tunFile.Write(p)
 }
 
-func (t *NativeTun) WriteVectorised(buffers []*buf.Buffer) error {
+func (t *NativeTun) WriteVectorised(buffers []*pool.Buffer) error {
 	if t.gsoEnabled {
-		n := buf.LenMulti(buffers)
-		buffer := buf.NewSize(virtioNetHdrLen + n)
+		n := pool.LenMulti(buffers)
+		buffer := pool.NewSize(virtioNetHdrLen + n)
 		buffer.Truncate(virtioNetHdrLen)
-		buf.CopyMulti(buffer.Extend(n), buffers)
+		pool.CopyMulti(buffer.Extend(n), buffers)
 		_, err := t.tunFile.Write(buffer.Bytes())
 		buffer.Release()
 		return err
@@ -137,8 +137,7 @@ func (t *NativeTun) BatchSize() int {
 	if !t.gsoEnabled {
 		return 1
 	}
-	/* // Not works on some devices: https://github.com/breakfreesoftware/luma-box/issues/1605
-	batchSize := int(gsoMaxSize/t.options.MTU) * 2
+	/*batchSize := int(gsoMaxSize/t.options.MTU) * 2
 	if batchSize > idealBatchSize {
 		batchSize = idealBatchSize
 	}
