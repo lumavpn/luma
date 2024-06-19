@@ -24,14 +24,19 @@ Please refer to our website luma.net for additional information how the service 
 
 ## Usage
 
-Create a `config.yaml` configuration file, and put it in same directory as the luma binary:
+Create a `config.yaml` configuration file, and put it in the same directory as the luma binary:
 
 ```yaml
 loglevel: debug
+socks-port: 8787
 listeners:
   - name: local-socks
     type: socks
     port: 10808
+tun:
+  enable: true
+  stack: system # system or gvisor
+  device: tun://utun
 ```
 
 ## Installation

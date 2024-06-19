@@ -32,6 +32,11 @@ func NewStack(cfg *Config) (Stack, error) {
 	switch cfg.Stack {
 	case TunGVisor:
 		return NewGVisor(cfg)
+	case TunSystem:
+		if cfg.IncludeAllNetworks {
+			return nil, ErrIncludeAllNetworks
+		}
+		return NewSystem(cfg)
 	default:
 		return nil, fmt.Errorf("unknown stack: %s", cfg.Stack)
 	}

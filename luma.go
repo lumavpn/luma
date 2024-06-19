@@ -60,8 +60,18 @@ func (lu *Luma) setupLocalSocks(cfg *config.Config) error {
 	return nil
 }
 
-func (lu *Luma) setupTun(cfg *config.Tun) error {
-	listener, err := tun.New(cfg, lu.tunnel)
+// setupTun parses the TUN configuration and creates a new tun.Listener if enabled that
+// intercepts all traffic
+func (lu *Luma) setupTun(cfg *config.Config) error {
+	tunConfig, err := parseTun(cfg, lu.tunnel)
+	if err != nil {
+		return err
+	}
+	if !tunConfig.Enable {
+		// tunnel is disabled
+		return nil
+	}
+	listener, err := tun.New(tunConfig, lu.tunnel)
 	if err != nil {
 		return err
 	}
@@ -78,11 +88,7 @@ func (lu *Luma) applyConfig(cfg *config.Config) error {
 	if err := lu.setupLocalSocks(cfg); err != nil {
 		return err
 	}
-	tunConfig, err := parseTun(cfg, lu.tunnel)
-	if err != nil {
-		return err
-	}
-	if err := lu.setupTun(tunConfig); err != nil {
+	if err := lu.setupTun(cfg); err != nil {
 		return err
 	}
 	return nil
@@ -115,5 +121,8 @@ func (lu *Luma) Stop() {
 	}
 	if lu.socksUDPListener != nil {
 		lu.socksUDPListener.Close()
+	}
+	if lu.tunListener != nil {
+		lu.tunListener.Close()
 	}
 }
