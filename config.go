@@ -3,6 +3,7 @@ package luma
 import (
 	"fmt"
 	"net/netip"
+	"strings"
 
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/listener"
@@ -12,8 +13,35 @@ import (
 	"github.com/lumavpn/luma/proxy/adapter"
 	"github.com/lumavpn/luma/proxy/outbound"
 	"github.com/lumavpn/luma/proxy/protos"
+	"github.com/lumavpn/luma/rule"
 	"github.com/lumavpn/luma/tunnel"
+	"github.com/lumavpn/luma/util"
 )
+
+// parseConfig is used to parse the general configuration used by Luma
+func (lu *Luma) parseConfig(cfg *config.Config) error {
+	proxies, err := parseProxies(cfg)
+	if err != nil {
+		return err
+	}
+	listeners, err := parseListeners(cfg)
+	if err != nil {
+		return err
+	}
+
+	rules, err := parseRules(cfg, proxies, "rules")
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("Have %d rules", len(rules))
+
+	lu.mu.Lock()
+	lu.listeners = listeners
+	lu.proxies = proxies
+	lu.mu.Unlock()
+	return nil
+}
 
 // parseProxies returns a map of proxies that are present in the config
 func parseProxies(cfg *config.Config) (map[string]proxy.Proxy, error) {
@@ -53,6 +81,49 @@ func parseListeners(cfg *config.Config) (listeners map[string]inbound.InboundLis
 		listeners[listener.Name()] = listener
 	}
 	return
+}
+
+func parseRules(cfg *config.Config, proxies map[string]proxy.Proxy, format string) ([]rule.Rule, error) {
+	var rules []rule.Rule
+	for idx, line := range cfg.Rules {
+		ruleParts := util.TrimArray(strings.Split(line, ","))
+		if len(ruleParts) == 0 {
+			log.Errorf("Invalid rule line, skipping: %v", line)
+			continue
+		}
+		var target, payload string
+		var params []string
+		ruleName := ruleParts[0]
+		ruleLength := len(ruleParts)
+		if ruleName == "NOT" || ruleName == "OR" || ruleName == "AND" || ruleName == "SUB-RULE" {
+			target = ruleParts[ruleLength-1]
+			payload = strings.Join(ruleParts[1:ruleLength-1], ",")
+		} else {
+			if ruleLength < 2 {
+				return nil, fmt.Errorf("%s[%d] [%s] error: format invalid", format, idx, line)
+			}
+			if ruleLength < 4 {
+				ruleParts = append(ruleParts, make([]string, 4-ruleLength)...)
+			}
+			if ruleName == "MATCH" {
+				ruleLength = 2
+			}
+			if ruleLength >= 3 {
+				ruleLength = 3
+				payload = ruleParts[1]
+			}
+			target = ruleParts[ruleLength-1]
+			params = ruleParts[ruleLength:]
+		}
+		params = util.TrimArray(params)
+		rule, err := rule.ParseRule(ruleName, payload, target, params)
+		if err != nil {
+			log.Errorf("Unknown rule: %v", ruleName)
+			continue
+		}
+		rules = append(rules, rule)
+	}
+	return rules, nil
 }
 
 func parseTun(cfg *config.Config, t tunnel.Tunnel) (*config.Tun, error) {

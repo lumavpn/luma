@@ -98,19 +98,9 @@ func (lu *Luma) applyConfig(cfg *config.Config) error {
 func (lu *Luma) Start(ctx context.Context) error {
 	log.Debug("Starting new instance")
 	cfg := lu.config
-	proxies, err := parseProxies(cfg)
-	if err != nil {
+	if err := lu.parseConfig(cfg); err != nil {
 		return err
 	}
-	listeners, err := parseListeners(cfg)
-	if err != nil {
-		return err
-	}
-	lu.mu.Lock()
-	lu.listeners = listeners
-	lu.proxies = proxies
-	lu.mu.Unlock()
-
 	return lu.applyConfig(cfg)
 }
 

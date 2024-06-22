@@ -29,6 +29,10 @@ type Config struct {
 	Listeners []map[string]any `yaml:"listeners"`
 	Proxies   []map[string]any `yaml:"proxies"`
 
+	// Rules
+	Rules    []string            `yaml:"rules"`
+	SubRules map[string][]string `yaml:"sub-rules"`
+
 	// Tunnel config
 	Tun Tun `yaml:"tun"`
 }

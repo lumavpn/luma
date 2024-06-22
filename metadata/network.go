@@ -20,6 +20,13 @@ var NetworkMapping = map[string]Network{
 
 type Network uint8
 
+func EncodeNetwork(n string) (Network, error) {
+	if network, ok := NetworkMapping[strings.ToLower(n)]; ok {
+		return network, nil
+	}
+	return Network(0), fmt.Errorf("Unknown network: %v", n)
+}
+
 func (n Network) String() string {
 	switch n {
 	case TCP:

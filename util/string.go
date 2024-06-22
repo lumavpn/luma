@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -19,6 +20,14 @@ func ReverseString(s string) string {
 		a[i], a[j] = a[j], a[i]
 	}
 	return string(a)
+}
+
+func TrimArray(arr []string) []string {
+	var r []string
+	for _, e := range arr {
+		r = append(r, strings.Trim(e, " "))
+	}
+	return r
 }
 
 func ToString(messages ...any) string {

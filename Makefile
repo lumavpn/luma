@@ -18,6 +18,11 @@ GO_BUILD = go build $(BUILD_FLAGS) -ldflags '$(LDFLAGS)' -tags '$(BUILD_TAGS)' -
 
 .PHONY: luma test
 
+protos:
+	go install github.com/bufbuild/buf/cmd/buf@latest
+	cd ./proto && buf generate
+	mv proto/rules.pb.go rule && mv proto/proxies.pb.go proxy/protos
+
 luma:
 	cd cmd/luma; \
 	$(GO_BUILD) -o ../../$(BUILD_DIR)/luma
