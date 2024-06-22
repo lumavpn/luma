@@ -33,7 +33,7 @@ func (c *ConnContext) Metadata() *M.Metadata {
 	return c.metadata
 }
 
-func (c *ConnContext) Conn() net.Conn {
+func (c *ConnContext) Conn() *BuffConn {
 	return c.conn
 }
 

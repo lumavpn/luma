@@ -30,9 +30,13 @@ type Metadata struct {
 	InIP   netip.Addr `json:"inboundIP"`
 	InPort uint16     `json:"inboundPort,string"`
 
-	Uid         uint32 `json:"uid"`
-	Process     string `json:"process"`
-	ProcessPath string `json:"processPath"`
+	DNSMode      common.DNSMode `json:"dnsMode"`
+	Uid          uint32         `json:"uid"`
+	Process      string         `json:"process"`
+	ProcessPath  string         `json:"processPath"`
+	SpecialProxy string         `json:"specialProxy"`
+	SpecialRules string         `json:"specialRules"`
+	RemoteDst    string         `json:"remoteDestination"`
 
 	RawSrcAddr net.Addr `json:"-"`
 	RawDstAddr net.Addr `json:"-"`
@@ -66,8 +70,21 @@ func (m *Metadata) SourceDetail() string {
 	}
 }
 
+func (m *Metadata) Pure() *Metadata {
+	if (m.DNSMode == common.DNSMapping || m.DNSMode == common.DNSHosts) && m.DstIP.IsValid() {
+		copyM := *m
+		copyM.Host = ""
+		return &copyM
+	}
+	return m
+}
+
 func (m *Metadata) Valid() bool {
 	return m.Host != "" || m.DstIP.IsValid()
+}
+
+func (m *Metadata) Resolved() bool {
+	return m.DstIP.IsValid()
 }
 
 func (m *Metadata) AddrType() int {

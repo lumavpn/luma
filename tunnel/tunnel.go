@@ -11,6 +11,7 @@ import (
 	"github.com/lumavpn/luma/log"
 	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
+	"github.com/lumavpn/luma/tunnel/nat"
 )
 
 type tunnel struct {
@@ -19,6 +20,7 @@ type tunnel struct {
 	status      atomic.TypedValue[TunnelStatus]
 	tcpQueue    chan adapter.TCPConn
 	udpQueue    chan adapter.PacketAdapter
+	natTable    nat.NatTable
 }
 
 type Tunnel interface {
@@ -37,6 +39,7 @@ type Tunnel interface {
 // New returns a new instance of Tunnel
 func New() Tunnel {
 	t := &tunnel{
+		natTable: nat.New(),
 		proxies:  make(map[string]proxy.Proxy),
 		status:   atomic.NewTypedValue[TunnelStatus](Suspend),
 		tcpQueue: make(chan adapter.TCPConn),

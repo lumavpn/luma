@@ -40,3 +40,19 @@ func (c *BuffConn) Peek(n int) ([]byte, error) {
 func (c *BuffConn) Discard(n int) (discarded int, err error) {
 	return c.r.Discard(n)
 }
+
+func (c *BuffConn) Read(p []byte) (int, error) {
+	return c.r.Read(p)
+}
+
+func (c *BuffConn) ReadByte() (byte, error) {
+	return c.r.ReadByte()
+}
+
+func (c *BuffConn) UnreadByte() error {
+	return c.r.UnreadByte()
+}
+
+func (c *BuffConn) Buffered() int {
+	return c.r.Buffered()
+}

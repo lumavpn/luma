@@ -4,6 +4,7 @@ import (
 	"net"
 
 	"github.com/gofrs/uuid/v5"
+	"github.com/lumavpn/luma/conn"
 	M "github.com/lumavpn/luma/metadata"
 )
 
@@ -14,7 +15,7 @@ type ConnContext interface {
 type TCPConn interface {
 	ConnContext
 	Metadata() *M.Metadata
-	Conn() net.Conn
+	Conn() *conn.BuffConn
 }
 
 type UDPConn interface {

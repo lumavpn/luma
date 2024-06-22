@@ -6,10 +6,17 @@ import (
 	M "github.com/lumavpn/luma/metadata"
 )
 
+type WriteBack interface {
+	WriteBack(b []byte, addr net.Addr) (n int, err error)
+}
+
 // UDPPacket contains the data of a UDP packet. It includes the ability to control/access the UDP packet's source
 type UDPPacket interface {
 	// Data returns the payload of the UDP Packet
 	Data() []byte
+
+	// WriteBack writes the payload with source IP/Port equals addr
+	WriteBack
 
 	// Drop is called after a packet is used and no longer needed
 	Drop()
