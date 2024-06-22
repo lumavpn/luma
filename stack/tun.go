@@ -17,6 +17,7 @@ type Options struct {
 	Inet4Address   []netip.Prefix
 	Inet6Address   []netip.Prefix
 	MTU            uint32
+	GSO            bool
 	AutoRoute      bool
 	StrictRoute    bool
 	IncludePackage []string

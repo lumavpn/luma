@@ -3,7 +3,6 @@ package adapter
 import (
 	"fmt"
 
-	"github.com/breakfreesoftware/luma/proxy/proto"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/outbound"
 	"github.com/lumavpn/luma/proxy/protos"
@@ -49,7 +48,7 @@ func ParseProxy(mapping map[string]any) (proxy.Proxy, error) {
 			return nil, err
 		}
 		proxy, err = outbound.NewHTTP(*httpOption)
-	case proto.AdapterType_Socks5:
+	case protos.AdapterType_Socks5:
 		socksOption, err := decodeOptions[outbound.Socks5Options](mapping)
 		if err != nil {
 			return nil, err

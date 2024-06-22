@@ -4,10 +4,14 @@ go 1.22.3
 
 require (
 	github.com/database64128/tfo-go/v2 v2.2.1
+	github.com/go-ole/go-ole v1.3.0
 	github.com/gofrs/uuid/v5 v5.2.0
 	github.com/hashicorp/yamux v0.1.1
+	github.com/jpillora/backoff v1.0.0
+	github.com/lumavpn/netlink v0.0.0-20240622200618-d7ea0797ee48
 	github.com/miekg/dns v1.1.61
 	github.com/mitchellh/mapstructure v1.5.0
+	github.com/puzpuzpuz/xsync/v3 v3.2.0
 	github.com/samber/lo v1.39.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
@@ -25,12 +29,10 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/google/btree v1.1.2 // indirect
-	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/puzpuzpuz/xsync/v3 v3.2.0 // indirect
+	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 // indirect
 	golang.org/x/exp v0.0.0-20230725093048-515e97ebf090 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect

@@ -13,11 +13,9 @@ import (
 
 	"github.com/lumavpn/luma/common/bufio"
 	E "github.com/lumavpn/luma/common/errors"
-	"github.com/lumavpn/luma/common/generics/list"
 	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
 	"github.com/lumavpn/luma/common/rw"
-	"github.com/lumavpn/luma/common/shell"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/stack/monitor"
 	"github.com/lumavpn/luma/util"
@@ -28,10 +26,10 @@ import (
 var _ LinuxTUN = (*NativeTun)(nil)
 
 type NativeTun struct {
-	tunFd             int
-	tunFile           *os.File
-	tunWriter         N.VectorisedWriter
-	interfaceCallback *list.Element[monitor.DefaultInterfaceUpdateCallback]
+	tunFd     int
+	tunFile   *os.File
+	tunWriter N.VectorisedWriter
+	//interfaceCallback *list.Element[monitor.DefaultInterfaceUpdateCallback]
 	options           Options
 	ruleIndex6        []int
 	gsoEnabled        bool
@@ -798,9 +796,9 @@ func (t *NativeTun) setSearchDomainForSystemdResolved() {
 	if len(t.options.Inet6Address) > 0 {
 		dnsServer = append(dnsServer, t.options.Inet6Address[0].Addr().Next())
 	}
-	go shell.Exec(ctlPath, "domain", t.options.Name, "~.").Run()
+	go util.Exec(ctlPath, "domain", t.options.Name, "~.").Run()
 	if t.options.AutoRoute {
-		go shell.Exec(ctlPath, "default-route", t.options.Name, "true").Run()
-		go shell.Exec(ctlPath, append([]string{"dns", t.options.Name}, util.Map(dnsServer, netip.Addr.String)...)...).Run()
+		go util.Exec(ctlPath, "default-route", t.options.Name, "true").Run()
+		go util.Exec(ctlPath, append([]string{"dns", t.options.Name}, util.Map(dnsServer, netip.Addr.String)...)...).Run()
 	}
 }
