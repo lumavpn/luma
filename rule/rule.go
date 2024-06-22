@@ -14,6 +14,8 @@ type Rule interface {
 	Adapter() string
 	Payload() string
 	Rule() RuleType
+	ShouldResolveIP() bool
+	ShouldFindProcess() bool
 }
 
 func EncodeRuleType(s string) (RuleType, error) {

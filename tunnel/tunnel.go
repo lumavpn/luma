@@ -6,17 +6,21 @@ import (
 	"runtime"
 
 	"github.com/lumavpn/luma/adapter"
+	"github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/common/atomic"
 	"github.com/lumavpn/luma/conn"
 	"github.com/lumavpn/luma/log"
 	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
+	"github.com/lumavpn/luma/proxydialer"
 	"github.com/lumavpn/luma/tunnel/nat"
 )
 
 type tunnel struct {
 	fakeIPRange netip.Prefix
+	mode        common.TunnelMode
 	proxies     map[string]proxy.Proxy
+	proxyDialer proxydialer.ProxyDialer
 	status      atomic.TypedValue[TunnelStatus]
 	tcpQueue    chan adapter.TCPConn
 	udpQueue    chan adapter.PacketAdapter
@@ -30,6 +34,8 @@ type Tunnel interface {
 	HandleTCPConn(c net.Conn, metadata *M.Metadata)
 	HandleUDPPacket(packet adapter.UDPPacket, metadata *M.Metadata)
 
+	SetMode(m common.TunnelMode)
+
 	// SetStatus sets the current status of the Tunnel
 	SetStatus(s TunnelStatus)
 	// Status returns the current status of the Tunnel
@@ -37,13 +43,14 @@ type Tunnel interface {
 }
 
 // New returns a new instance of Tunnel
-func New() Tunnel {
+func New(proxyDialer proxydialer.ProxyDialer) Tunnel {
 	t := &tunnel{
-		natTable: nat.New(),
-		proxies:  make(map[string]proxy.Proxy),
-		status:   atomic.NewTypedValue[TunnelStatus](Suspend),
-		tcpQueue: make(chan adapter.TCPConn),
-		udpQueue: make(chan adapter.PacketAdapter),
+		natTable:    nat.New(),
+		proxies:     make(map[string]proxy.Proxy),
+		proxyDialer: proxyDialer,
+		status:      atomic.NewTypedValue[TunnelStatus](Suspend),
+		tcpQueue:    make(chan adapter.TCPConn),
+		udpQueue:    make(chan adapter.PacketAdapter),
 	}
 	go t.process()
 	return t
@@ -105,6 +112,17 @@ func (t *tunnel) process() {
 	for conn := range queue {
 		go t.handleTCPConn(conn)
 	}
+}
+
+// Mode return current mode
+func (t *tunnel) Mode() common.TunnelMode {
+	return t.mode
+}
+
+// SetMode change the mode of tunnel
+func (t *tunnel) SetMode(m common.TunnelMode) {
+	log.Debugf("Setting tunnel mode to %s", m)
+	t.mode = m
 }
 
 // SetStatus sets the current status of the Tunnel

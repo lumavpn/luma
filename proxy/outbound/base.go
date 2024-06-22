@@ -50,6 +50,10 @@ func (b *Base) Protocol() protos.Protocol {
 	return b.proto
 }
 
+func (b *Base) Unwrap(*metadata.Metadata, bool) proxy.Proxy {
+	return nil
+}
+
 // SupportUDP returns whether or not the proxy supports UDP
 func (b *Base) SupportUDP() bool {
 	return b.udp

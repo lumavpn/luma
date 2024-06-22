@@ -22,10 +22,13 @@ type ProxyAdapter interface {
 	Name() string
 	// Addr is the address of the proxy
 	Addr() string
+	// AdapterType is the adapter type of the proxy
+	AdapterType() protos.AdapterType
 	// Protocol is the protocol of the proxy
 	Protocol() protos.Protocol
 	// SupportUDP returns whether or not the proxy supports UDP
 	SupportUDP() bool
+	Unwrap(*metadata.Metadata, bool) Proxy
 }
 
 type Proxy interface {

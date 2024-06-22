@@ -5,10 +5,10 @@ import (
 	"errors"
 	"net/netip"
 
+	"github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/component/resolver"
 	"github.com/lumavpn/luma/component/slowdown"
 	"github.com/lumavpn/luma/metadata"
-	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/protos"
 	"github.com/lumavpn/luma/rule"
@@ -32,9 +32,25 @@ func preHandleMetadata(m *metadata.Metadata) error {
 	return nil
 }
 
-func (t *tunnel) resolveMetadata(metadata *M.Metadata) (proxy.Proxy, rule.Rule, error) {
-	proxy := t.proxies["DIRECT"]
-	return proxy, nil, nil
+func (t *tunnel) resolveMetadata(m *metadata.Metadata) (proxy.Proxy, rule.Rule, error) {
+	var err error
+	if m.SpecialProxy != "" {
+		proxy, err := t.proxyDialer.SelectProxyByName(m.SpecialProxy)
+		return proxy, nil, err
+	}
+
+	var proxy proxy.Proxy
+	mode := t.mode
+	switch mode {
+	case common.Direct:
+		proxy, err = t.proxyDialer.SelectProxyByName("DIRECT")
+	case common.Global:
+		proxy, err = t.proxyDialer.SelectProxyByName("GLOBAL")
+	default:
+		return t.proxyDialer.Match(m)
+	}
+
+	return proxy, nil, err
 }
 
 func retry[T any](ctx context.Context, ft func(context.Context) (T, error), fe func(err error)) (t T, err error) {

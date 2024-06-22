@@ -11,6 +11,7 @@ import (
 	"github.com/lumavpn/luma/listener/tun"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/proxy"
+	"github.com/lumavpn/luma/proxydialer"
 	"github.com/lumavpn/luma/tunnel"
 )
 
@@ -34,9 +35,10 @@ type Luma struct {
 
 // New creates a new instance of Luma
 func New(cfg *config.Config) *Luma {
+	proxyDialer := proxydialer.New()
 	return &Luma{
 		config: cfg,
-		tunnel: tunnel.New(),
+		tunnel: tunnel.New(proxyDialer),
 	}
 }
 

@@ -25,3 +25,11 @@ func (b *Base) Rule() RuleType {
 func (b *Base) Match(*metadata.Metadata) (bool, string) {
 	return false, ""
 }
+
+func (b *Base) ShouldFindProcess() bool {
+	return false
+}
+
+func (b *Base) ShouldResolveIP() bool {
+	return false
+}
