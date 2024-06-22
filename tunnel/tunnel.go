@@ -10,10 +10,12 @@ import (
 	"github.com/lumavpn/luma/conn"
 	"github.com/lumavpn/luma/log"
 	M "github.com/lumavpn/luma/metadata"
+	"github.com/lumavpn/luma/proxy"
 )
 
 type tunnel struct {
 	fakeIPRange netip.Prefix
+	proxies     map[string]proxy.Proxy
 	status      atomic.TypedValue[TunnelStatus]
 	tcpQueue    chan adapter.TCPConn
 	udpQueue    chan adapter.PacketAdapter
@@ -35,7 +37,8 @@ type Tunnel interface {
 // New returns a new instance of Tunnel
 func New() Tunnel {
 	t := &tunnel{
-		status:   atomic.NewTypedValue[TunnelStatus](Disconnected),
+		proxies:  make(map[string]proxy.Proxy),
+		status:   atomic.NewTypedValue[TunnelStatus](Suspend),
 		tcpQueue: make(chan adapter.TCPConn),
 		udpQueue: make(chan adapter.PacketAdapter),
 	}

@@ -31,3 +31,26 @@ func WithRoutingMark(mark int) Option {
 		opt.routingMark = mark
 	}
 }
+
+func WithOption(o option) Option {
+	return func(opt *option) {
+		*opt = o
+	}
+}
+
+func applyOptions(options ...Option) *option {
+	opt := &option{
+		interfaceName: DefaultInterfaceName.Load(),
+		routingMark:   int(DefaultRoutingMark.Load()),
+	}
+
+	for _, o := range DefaultOptions {
+		o(opt)
+	}
+
+	for _, o := range options {
+		o(opt)
+	}
+
+	return opt
+}

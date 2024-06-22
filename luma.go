@@ -2,7 +2,6 @@ package luma
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/lumavpn/luma/config"
@@ -16,10 +15,13 @@ import (
 )
 
 type Luma struct {
+	// config is the configuration this instance of Luma is using
 	config *config.Config
 
+	// proxies is a map of proxies that Luma is configured to proxy traffic through
 	proxies map[string]proxy.Proxy
 
+	// listeners are inbound listeners that this instance of Luma is configured with
 	listeners map[string]inbound.InboundListener
 
 	socksListener    *socks.Listener
@@ -36,49 +38,6 @@ func New(cfg *config.Config) *Luma {
 		config: cfg,
 		tunnel: tunnel.New(),
 	}
-}
-
-func (lu *Luma) setupLocalSocks(cfg *config.Config) error {
-	addr := fmt.Sprintf("127.0.0.1:%d", cfg.SocksPort)
-	tcpListener, err := socks.New(addr, lu.tunnel)
-	if err != nil {
-		return err
-	}
-
-	udpListener, err := socks.NewUDP(addr, lu.tunnel)
-	if err != nil {
-		tcpListener.Close()
-		return err
-	}
-
-	lu.mu.Lock()
-	lu.socksListener = tcpListener
-	lu.socksUDPListener = udpListener
-	lu.mu.Unlock()
-
-	log.Debugf("SOCKS proxy listening at: %s", tcpListener.Address())
-	return nil
-}
-
-// setupTun parses the TUN configuration and creates a new tun.Listener if enabled that
-// intercepts all traffic
-func (lu *Luma) setupTun(cfg *config.Config) error {
-	tunConfig, err := parseTun(cfg, lu.tunnel)
-	if err != nil {
-		return err
-	}
-	if !tunConfig.Enable {
-		// tunnel is disabled
-		return nil
-	}
-	listener, err := tun.New(tunConfig, lu.tunnel)
-	if err != nil {
-		return err
-	}
-	lu.mu.Lock()
-	lu.tunListener = listener
-	lu.mu.Unlock()
-	return nil
 }
 
 // applyConfig applies the given Config to the instance of Luma to complete setup

@@ -2,13 +2,14 @@ package proxy
 
 import (
 	"context"
-	"net"
+	"time"
 
-	M "github.com/lumavpn/luma/metadata"
+	"github.com/lumavpn/luma/dialer"
+	"github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy/protos"
 )
 
-type Proxy interface {
+type ProxyAdapter interface {
 	// Name returns the name of this proxy
 	Name() string
 	// Addr is the address of the proxy
@@ -18,5 +19,16 @@ type Proxy interface {
 	// SupportUDP returns whether or not the proxy supports UDP
 	SupportUDP() bool
 	// DialContext connects to the address on the network specified by Metadata
-	DialContext(ctx context.Context, metadata *M.Metadata) (net.Conn, error)
+	DialContext(ctx context.Context, metadata *metadata.Metadata, opts ...dialer.Option) (Conn, error)
+	ListenPacketContext(context.Context, *metadata.Metadata, ...dialer.Option) (PacketConn, error)
+}
+
+type Proxy interface {
+	ProxyAdapter
+	AliveForTestUrl(url string) bool
+}
+
+type DelayHistory struct {
+	Time  time.Time `json:"time"`
+	Delay uint16    `json:"delay"`
 }

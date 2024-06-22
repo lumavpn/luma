@@ -26,7 +26,7 @@ func ParseProxy(mapping map[string]any) (proxy.Proxy, error) {
 		return nil, err
 	}
 
-	var proxy proxy.Proxy
+	var proxy proxy.ProxyAdapter
 	switch adapterType {
 	case protos.AdapterType_Direct:
 		err = decoder.Decode(mapping)
@@ -35,5 +35,5 @@ func ParseProxy(mapping map[string]any) (proxy.Proxy, error) {
 		}
 		proxy = outbound.NewDirectWithOptions(*directOption)
 	}
-	return proxy, nil
+	return NewProxy(proxy), nil
 }

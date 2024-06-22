@@ -7,16 +7,18 @@ import (
 )
 
 const (
-	Disconnected TunnelStatus = iota
-	Connected
+	Suspend TunnelStatus = iota
+	Inner
+	Running
 )
 
 type TunnelStatus int
 
 // StatusMapping is a mapping for the TunnelStatus enum
 var StatusMapping = map[string]TunnelStatus{
-	Disconnected.String(): Disconnected,
-	Connected.String():    Connected,
+	Suspend.String(): Suspend,
+	Inner.String():   Inner,
+	Running.String(): Running,
 }
 
 // UnmarshalJSON unserialize TunnelStatus
@@ -55,10 +57,12 @@ func (s TunnelStatus) MarshalYAML() (any, error) {
 
 func (s TunnelStatus) String() string {
 	switch s {
-	case Disconnected:
-		return "disconnected"
-	case Connected:
-		return "connected"
+	case Inner:
+		return "inner"
+	case Suspend:
+		return "suspend"
+	case Running:
+		return "unknown"
 	default:
 		return "Unknown"
 	}

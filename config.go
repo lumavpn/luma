@@ -29,7 +29,7 @@ func (lu *Luma) parseConfig(cfg *config.Config) error {
 		return err
 	}
 
-	rules, err := parseRules(cfg, proxies, "rules")
+	rules, err := parseRules(cfg, proxies)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (lu *Luma) parseConfig(cfg *config.Config) error {
 // parseProxies returns a map of proxies that are present in the config
 func parseProxies(cfg *config.Config) (map[string]proxy.Proxy, error) {
 	proxies := make(map[string]proxy.Proxy)
-	proxies[protos.AdapterType_Direct.String()] = outbound.NewDirect()
+	proxies[protos.AdapterType_Direct.String()] = adapter.NewProxy(outbound.NewDirect())
 
 	// parse proxy
 	for idx, mapping := range cfg.Proxies {
@@ -83,7 +83,9 @@ func parseListeners(cfg *config.Config) (listeners map[string]inbound.InboundLis
 	return
 }
 
-func parseRules(cfg *config.Config, proxies map[string]proxy.Proxy, format string) ([]rule.Rule, error) {
+// parseRules returns a list of rules that are present in the config that should be applied when deciding
+// how to route traffic
+func parseRules(cfg *config.Config, proxies map[string]proxy.Proxy) ([]rule.Rule, error) {
 	var rules []rule.Rule
 	for idx, line := range cfg.Rules {
 		ruleParts := util.TrimArray(strings.Split(line, ","))
@@ -100,7 +102,7 @@ func parseRules(cfg *config.Config, proxies map[string]proxy.Proxy, format strin
 			payload = strings.Join(ruleParts[1:ruleLength-1], ",")
 		} else {
 			if ruleLength < 2 {
-				return nil, fmt.Errorf("%s[%d] [%s] error: format invalid", format, idx, line)
+				return nil, fmt.Errorf("[%d] [%s] error: format invalid", idx, line)
 			}
 			if ruleLength < 4 {
 				ruleParts = append(ruleParts, make([]string, 4-ruleLength)...)
@@ -115,6 +117,11 @@ func parseRules(cfg *config.Config, proxies map[string]proxy.Proxy, format strin
 			target = ruleParts[ruleLength-1]
 			params = ruleParts[ruleLength:]
 		}
+		if _, ok := proxies[target]; !ok {
+			if ruleName != "SUB-RULE" {
+				return nil, fmt.Errorf("[%d] [%s] error: proxy [%s] not found", idx, line, target)
+			}
+		}
 		params = util.TrimArray(params)
 		rule, err := rule.ParseRule(ruleName, payload, target, params)
 		if err != nil {
@@ -126,6 +133,7 @@ func parseRules(cfg *config.Config, proxies map[string]proxy.Proxy, format strin
 	return rules, nil
 }
 
+// parseTun is used to parse the tunnel configuration Luma is configured with
 func parseTun(cfg *config.Config, t tunnel.Tunnel) (*config.Tun, error) {
 	rawTun := cfg.Tun
 	tunAddressPrefix := t.FakeIPRange()

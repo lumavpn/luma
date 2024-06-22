@@ -1,6 +1,9 @@
 package outbound
 
-import "github.com/lumavpn/luma/proxy/protos"
+import (
+	"github.com/lumavpn/luma/dialer"
+	"github.com/lumavpn/luma/proxy/protos"
+)
 
 type Base struct {
 	name          string
@@ -45,4 +48,16 @@ func (b *Base) Protocol() protos.Protocol {
 // SupportUDP returns whether or not the proxy supports UDP
 func (b *Base) SupportUDP() bool {
 	return b.udp
+}
+
+// DialOptions return []dialer.Option from struct
+func (b *Base) DialOptions(opts ...dialer.Option) []dialer.Option {
+	if b.interfaceName != "" {
+		opts = append(opts, dialer.WithInterface(b.interfaceName))
+	}
+	if b.routingMark != 0 {
+		opts = append(opts, dialer.WithRoutingMark(b.routingMark))
+	}
+
+	return opts
 }

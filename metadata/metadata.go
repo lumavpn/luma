@@ -1,10 +1,12 @@
 package metadata
 
 import (
+	"fmt"
 	"net"
 	"net/netip"
 	"strconv"
 
+	"github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/proxy/protos"
 )
 
@@ -27,6 +29,10 @@ type Metadata struct {
 	InIP   netip.Addr `json:"inboundIP"`
 	InPort uint16     `json:"inboundPort,string"`
 
+	Uid         uint32 `json:"uid"`
+	Process     string `json:"process"`
+	ProcessPath string `json:"processPath"`
+
 	RawSrcAddr net.Addr `json:"-"`
 	RawDstAddr net.Addr `json:"-"`
 }
@@ -41,6 +47,26 @@ func (m *Metadata) SourceAddress() string {
 
 func (m *Metadata) AddrPort() netip.AddrPort {
 	return netip.AddrPortFrom(m.DstIP.Unmap(), m.DstPort)
+}
+
+func (m *Metadata) SourceDetail() string {
+	if m.Type == protos.Protocol_INNER {
+		return fmt.Sprintf("%s", common.LumaName)
+	}
+	switch {
+	case m.Process != "" && m.Uid != 0:
+		return fmt.Sprintf("%s(%s, uid=%d)", m.SourceAddress(), m.Process, m.Uid)
+	case m.Uid != 0:
+		return fmt.Sprintf("%s(uid=%d)", m.SourceAddress(), m.Uid)
+	case m.Process != "":
+		return fmt.Sprintf("%s(%s)", m.SourceAddress(), m.Process)
+	default:
+		return fmt.Sprintf("%s", m.SourceAddress())
+	}
+}
+
+func (m *Metadata) Valid() bool {
+	return m.Host != "" || m.DstIP.IsValid()
 }
 
 func (m *Metadata) UDPAddr() *net.UDPAddr {

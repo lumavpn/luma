@@ -5,9 +5,10 @@ enum Protocol {
   PROTOCOL_UNSET = 0;
   HTTP = 1;
   HTTPS = 2;
-  SOCKS4 = 3;
-  SOCKS5 = 4;
-  TUN = 5;
+  INNER = 3;
+  SOCKS4 = 4;
+  SOCKS5 = 5;
+  TUN = 6;
 }
 
 enum AdapterType {
