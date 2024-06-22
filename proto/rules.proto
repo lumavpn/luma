@@ -1,0 +1,15 @@
+syntax = "proto3";
+option go_package = "./rule";
+
+enum RuleType {
+	Unset = 0;
+	DOMAIN = 1;
+	DOMAINSUFFIX = 2;
+	DOMAINKEYWORD = 3;
+	DOMAINREGEX = 4;
+	GEOSITE = 5;
+	GEOIP = 6;
+	SRCPORT = 7;
+	DSTPORT = 8;
+	NETWORK = 9;
+}

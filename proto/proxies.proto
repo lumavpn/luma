@@ -1,0 +1,17 @@
+syntax = "proto3";
+option go_package = "github.com/lumavpn/luma/proxy/protos";
+
+enum Protocol {
+  PROTOCOL_UNSET = 0;
+  HTTP = 1;
+  HTTPS = 2;
+  SOCKS4 = 3;
+  SOCKS5 = 4;
+  TUN = 5;
+}
+
+enum AdapterType {
+  AdapterType_Unset = 0;
+  Direct = 1;
+  Reject = 2;
+}
