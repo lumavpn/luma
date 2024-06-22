@@ -11,7 +11,6 @@ import (
 	"github.com/lumavpn/luma/conn"
 	"github.com/lumavpn/luma/log"
 	M "github.com/lumavpn/luma/metadata"
-	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxydialer"
 	"github.com/lumavpn/luma/tunnel/nat"
 )
@@ -19,7 +18,6 @@ import (
 type tunnel struct {
 	fakeIPRange netip.Prefix
 	mode        common.TunnelMode
-	proxies     map[string]proxy.Proxy
 	proxyDialer proxydialer.ProxyDialer
 	status      atomic.TypedValue[TunnelStatus]
 	tcpQueue    chan adapter.TCPConn
@@ -46,7 +44,6 @@ type Tunnel interface {
 func New(proxyDialer proxydialer.ProxyDialer) Tunnel {
 	t := &tunnel{
 		natTable:    nat.New(),
-		proxies:     make(map[string]proxy.Proxy),
 		proxyDialer: proxyDialer,
 		status:      atomic.NewTypedValue[TunnelStatus](Suspend),
 		tcpQueue:    make(chan adapter.TCPConn),
