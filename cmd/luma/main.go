@@ -14,6 +14,12 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 )
 
+func checkErr(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func main() {
 	var configFile string
 	var version bool
@@ -30,14 +36,12 @@ func main() {
 	ctx := context.Background()
 
 	cfg, err := config.Init(configFile)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(err)
+	lu, err := luma.New(cfg)
+	checkErr(err)
+	err = lu.Start(ctx)
+	checkErr(err)
 
-	lu := luma.New(cfg)
-	if err := lu.Start(ctx); err != nil {
-		log.Fatalf("unable to create luma: %v", err)
-	}
 	defer lu.Stop()
 
 	sigCh := make(chan os.Signal, 1)
