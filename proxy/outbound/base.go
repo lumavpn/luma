@@ -1,7 +1,12 @@
 package outbound
 
 import (
+	"context"
+
+	"github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/dialer"
+	"github.com/lumavpn/luma/metadata"
+	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/protos"
 )
 
@@ -15,7 +20,7 @@ type Base struct {
 	udp           bool
 }
 
-type BasicOptions struct {
+type BaseOptions struct {
 	Name        string
 	Addr        string
 	Protocol    protos.Protocol
@@ -48,6 +53,11 @@ func (b *Base) Protocol() protos.Protocol {
 // SupportUDP returns whether or not the proxy supports UDP
 func (b *Base) SupportUDP() bool {
 	return b.udp
+}
+
+// ListenPacketContext implements proxy.ProxyAdapter
+func (b *Base) ListenPacketContext(context.Context, *metadata.Metadata, ...dialer.Option) (proxy.PacketConn, error) {
+	return nil, common.ErrNotSupport
 }
 
 // DialOptions return []dialer.Option from struct

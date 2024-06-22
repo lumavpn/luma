@@ -8,6 +8,7 @@ import (
 
 	"github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/proxy/protos"
+	"github.com/lumavpn/luma/transport/socks5"
 )
 
 // Metadata represents a transport protocol session
@@ -67,6 +68,17 @@ func (m *Metadata) SourceDetail() string {
 
 func (m *Metadata) Valid() bool {
 	return m.Host != "" || m.DstIP.IsValid()
+}
+
+func (m *Metadata) AddrType() int {
+	switch true {
+	case m.Host != "" || !m.DstIP.IsValid():
+		return socks5.AtypDomainName
+	case m.DstIP.Is4():
+		return socks5.AtypIPv4
+	default:
+		return socks5.AtypIPv6
+	}
 }
 
 func (m *Metadata) UDPAddr() *net.UDPAddr {

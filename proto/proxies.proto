@@ -15,4 +15,28 @@ enum AdapterType {
   AdapterType_Unset = 0;
   Direct = 1;
   Reject = 2;
+  RejectDrop = 3;
+  Compatible = 4;
+  Pass = 5;
+  Dns = 6;
+
+  Relay = 7;
+  Selector = 8;
+  Fallback = 9;
+  URLTest = 10;
+  LoadBalance = 11;
+
+  Shadowsocks = 12;
+  ShadowsocksR = 13;
+  Snell = 14;
+  Socks5 = 15;
+  Http = 16;
+  Vmess = 17;
+  Vless = 18;
+  Trojan = 19;
+  Hysteria = 20;
+  Hysteria2 = 21;
+  Wireguard = 22;
+  Tuic = 23;
+  Ssh = 24;
 }

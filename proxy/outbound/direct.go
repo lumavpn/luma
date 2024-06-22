@@ -27,7 +27,7 @@ func NewDirect() *Direct {
 }
 
 // NewDirectWithOptions returns a new instance of Direct configured with the given options
-func NewDirectWithOptions(opts BasicOptions) *Direct {
+func NewDirectWithOptions(opts BaseOptions) *Direct {
 	return &Direct{
 		Base: &Base{
 			interfaceName: opts.Interface,
