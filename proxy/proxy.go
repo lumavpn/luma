@@ -1,7 +1,6 @@
 package proxy
 
 import (
-	"github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy/proto"
 )
 
@@ -11,8 +10,7 @@ type Proxy interface {
 	// Addr is the address of the proxy
 	Addr() string
 	// Protocol is the protocol of the proxy
-	Protocol() proto.Protocol
+	Protocol() proto.Proto
 	// SupportUDP returns whether or not the proxy supports UDP
 	SupportUDP() bool
-	Unwrap(*metadata.Metadata, bool) Proxy
 }
