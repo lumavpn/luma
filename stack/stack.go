@@ -3,9 +3,8 @@ package stack
 import (
 	"context"
 	"fmt"
-	"net"
 
-	"github.com/lumavpn/luma/metadata"
+	"github.com/lumavpn/luma/adapter"
 )
 
 type Stack interface {
@@ -19,11 +18,11 @@ type Options struct {
 }
 
 type TCPConnectionHandler interface {
-	NewConnection(ctx context.Context, conn net.Conn, m *metadata.Metadata) error
+	NewConnection(ctx context.Context, conn adapter.TCPConn) error
 }
 
 type UDPConnectionHandler interface {
-	NewPacketConnection(ctx context.Context, conn net.PacketConn, m *metadata.Metadata) error
+	NewPacketConnection(ctx context.Context, conn adapter.UDPConn) error
 }
 
 type Handler interface {

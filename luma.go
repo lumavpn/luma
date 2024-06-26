@@ -2,12 +2,11 @@ package luma
 
 import (
 	"context"
-	"net"
 	"sync"
 
+	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/log"
-	"github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/stack"
 	"github.com/lumavpn/luma/tunnel"
@@ -53,11 +52,11 @@ func (lu *Luma) SetStack(s stack.Stack) {
 	lu.mu.Unlock()
 }
 
-func (lu *Luma) NewConnection(ctx context.Context, conn net.Conn, m *metadata.Metadata) error {
+func (lu *Luma) NewConnection(ctx context.Context, conn adapter.TCPConn) error {
 	return nil
 }
 
-func (lu *Luma) NewPacketConnection(ctx context.Context, conn net.PacketConn, m *metadata.Metadata) error {
+func (lu *Luma) NewPacketConnection(ctx context.Context, conn adapter.UDPConn) error {
 	return nil
 }
 
