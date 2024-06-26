@@ -23,6 +23,7 @@ type Luma struct {
 
 	stack stack.Stack
 	// Tunnel
+	device tun.Device
 	tunnel tunnel.Tunnel
 
 	mu sync.Mutex
@@ -58,13 +59,19 @@ func (lu *Luma) Start(ctx context.Context) error {
 	defaultProxy := proxy.NewDirect()
 	proxy.SetDialer(defaultProxy)
 
+	device, err := tun.New(tun.Options{
+		Name: cfg.Device,
+		MTU:  tunMTU,
+	})
+	if err != nil {
+		return err
+	}
+	lu.SetDevice(device)
+
 	stack, err := stack.New(&stack.Options{
+		Device:  device,
 		Handler: lu,
 		Stack:   stack.TunGVisor,
-		TunOptions: tun.Options{
-			MTU:  tunMTU,
-			Name: cfg.Device,
-		},
 	})
 	if err != nil {
 		return err
@@ -78,6 +85,12 @@ func (lu *Luma) Start(ctx context.Context) error {
 	lu.SetStack(stack)
 	log.Debug("Luma successfully started")
 	return nil
+}
+
+func (lu *Luma) SetDevice(d tun.Device) {
+	lu.mu.Lock()
+	lu.device = d
+	lu.mu.Unlock()
 }
 
 func (lu *Luma) SetStack(s stack.Stack) {
@@ -100,6 +113,13 @@ func (lu *Luma) NewPacketConnection(ctx context.Context, conn adapter.UDPConn) e
 
 // Stop stops running the Luma engine
 func (lu *Luma) Stop() {
+	log.Debug("Stopping luma..")
+	if lu.device != nil {
+		lu.device.Close()
+	}
+	if lu.stack != nil {
+		lu.stack.Stop()
+	}
 
 }
 

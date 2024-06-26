@@ -14,9 +14,12 @@ type Stack interface {
 }
 
 type Options struct {
-	Handler    Handler
-	Stack      StackType
-	TunOptions tun.Options
+	Handler Handler
+	Stack   StackType
+
+	Device tun.Device
+
+	//TunOptions tun.Options
 }
 
 type TCPConnectionHandler interface {

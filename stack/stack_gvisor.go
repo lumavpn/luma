@@ -35,19 +35,25 @@ const (
 )
 
 type gVisor struct {
-	handler Handler
-	options *Options
-	tun     tun.Device
-	stack   *stack.Stack
+	handler  Handler
+	options  *Options
+	tun      tun.Device
+	stack    *stack.Stack
+	endpoint stack.LinkEndpoint
 }
 
 func NewGVisor(
 	options *Options,
 ) (Stack, error) {
+	if options.Device == nil {
+		return nil, errors.New("Missing device")
+	}
 	log.Debug("Creating new gVisor stack")
 	return &gVisor{
-		handler: options.Handler,
-		options: options,
+		tun:      options.Device,
+		endpoint: options.Device,
+		handler:  options.Handler,
+		options:  options,
 	}, nil
 }
 
@@ -93,11 +99,7 @@ func newGVisorStack(ep stack.LinkEndpoint) (*stack.Stack, error) {
 }
 
 func (t *gVisor) Start(ctx context.Context) error {
-	linkEndpoint, err := tun.New(t.options.TunOptions)
-	if err != nil {
-		return err
-	}
-	ipStack, err := newGVisorStack(linkEndpoint)
+	ipStack, err := newGVisorStack(t.endpoint)
 	if err != nil {
 		return err
 	}
@@ -147,6 +149,8 @@ func (t *gVisor) Start(ctx context.Context) error {
 
 	ipStack.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
 
+	t.stack = ipStack
+
 	return nil
 }
 
@@ -183,6 +187,12 @@ func setSocketOptions(s *stack.Stack, ep tcpip.Endpoint) tcpip.Error {
 }
 
 func (t *gVisor) Stop() error {
+	log.Debug("Closing gvisor stack..")
+	t.endpoint.Attach(nil)
+	t.stack.Close()
+	for _, endpoint := range t.stack.CleanupEndpoints() {
+		endpoint.Abort()
+	}
 	return nil
 }
 
