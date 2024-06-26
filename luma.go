@@ -2,13 +2,16 @@ package luma
 
 import (
 	"context"
+	"net"
 	"sync"
 
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/config"
+	"github.com/lumavpn/luma/dialer"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/stack"
+	"github.com/lumavpn/luma/stack/tun"
 	"github.com/lumavpn/luma/tunnel"
 )
 
@@ -36,14 +39,45 @@ func New(cfg *config.Config) (*Luma, error) {
 // Start starts the default engine running Luma. If there is any issue with the setup process, an error is returned
 func (lu *Luma) Start(ctx context.Context) error {
 	log.Debug("Starting new instance")
+	cfg := lu.config
+	tunMTU := cfg.MTU
+	if tunMTU == 0 {
+		tunMTU = 9000
+	}
+
+	if cfg.Interface != "" {
+		iface, err := net.InterfaceByName(cfg.Interface)
+		if err != nil {
+			return err
+		}
+		dialer.DefaultInterfaceName.Store(iface.Name)
+		dialer.DefaultInterfaceIndex.Store(int32(iface.Index))
+		log.Infof("[DIALER] bind to interface: %s", cfg.Interface)
+	}
+
+	defaultProxy := proxy.NewDirect()
+	proxy.SetDialer(defaultProxy)
+
 	stack, err := stack.New(&stack.Options{
 		Handler: lu,
+		Stack:   stack.TunGVisor,
+		TunOptions: tun.Options{
+			MTU:  tunMTU,
+			Name: cfg.Device,
+		},
 	})
 	if err != nil {
 		return err
 	}
+	log.Debug("Starting stack..")
+	err = stack.Start(context.Background())
+	if err != nil {
+		return err
+	}
+
 	lu.SetStack(stack)
-	return lu.applyConfig(lu.config)
+	log.Debug("Luma successfully started")
+	return nil
 }
 
 func (lu *Luma) SetStack(s stack.Stack) {
@@ -53,10 +87,14 @@ func (lu *Luma) SetStack(s stack.Stack) {
 }
 
 func (lu *Luma) NewConnection(ctx context.Context, conn adapter.TCPConn) error {
+	log.Debug("New TCP connection")
+	lu.tunnel.HandleTCP(conn)
 	return nil
 }
 
 func (lu *Luma) NewPacketConnection(ctx context.Context, conn adapter.UDPConn) error {
+	log.Debug("New UDP connection")
+	lu.tunnel.HandleUDP(conn)
 	return nil
 }
 
@@ -65,7 +103,7 @@ func (lu *Luma) Stop() {
 
 }
 
-// applyConfig applies the given Config to the instance of Luma to complete setup
-func (lu *Luma) applyConfig(cfg *config.Config) error {
+// startStack applies the given Config to the instance of Luma to complete setup
+func (lu *Luma) startStack(cfg *config.Config) error {
 	return nil
 }

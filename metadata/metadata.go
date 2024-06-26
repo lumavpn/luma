@@ -23,3 +23,44 @@ func (m *Metadata) DestinationAddress() string {
 func (m *Metadata) SourceAddress() string {
 	return net.JoinHostPort(m.SrcIP.String(), strconv.FormatUint(uint64(m.SrcPort), 10))
 }
+
+func (m *Metadata) Addr() net.Addr {
+	return &Addr{metadata: m}
+}
+
+func (m *Metadata) TCPAddr() *net.TCPAddr {
+	if m.Network != TCP || m.DstIP == nil {
+		return nil
+	}
+	return &net.TCPAddr{
+		IP:   m.DstIP,
+		Port: int(m.DstPort),
+	}
+}
+
+func (m *Metadata) UDPAddr() *net.UDPAddr {
+	if m.Network != UDP || m.DstIP == nil {
+		return nil
+	}
+	return &net.UDPAddr{
+		IP:   m.DstIP,
+		Port: int(m.DstPort),
+	}
+}
+
+// Addr implements the net.Addr interface.
+type Addr struct {
+	metadata *Metadata
+}
+
+func (a *Addr) Metadata() *Metadata {
+	return a.metadata
+}
+
+func (a *Addr) Network() string {
+	return a.metadata.Network.String()
+}
+
+func (a *Addr) String() string {
+	return a.metadata.DestinationAddress()
+}

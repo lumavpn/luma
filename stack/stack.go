@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/lumavpn/luma/adapter"
+	"github.com/lumavpn/luma/stack/tun"
 )
 
 type Stack interface {
@@ -13,8 +14,9 @@ type Stack interface {
 }
 
 type Options struct {
-	Handler Handler
-	Stack   StackType
+	Handler    Handler
+	Stack      StackType
+	TunOptions tun.Options
 }
 
 type TCPConnectionHandler interface {

@@ -26,30 +26,12 @@ import (
 )
 
 const (
-	defaultNIC tcpip.NICID = 1
-	// defaultWndSize if set to zero, the default
-	// receive window buffer size is used instead.
-	defaultWndSize = 0
-
-	// maxConnAttempts specifies the maximum number
-	// of in-flight tcp connection attempts.
-	maxConnAttempts = 2 << 10
-
-	// tcpKeepaliveCount is the maximum number of
-	// TCP keep-alive probes to send before giving up
-	// and killing the connection if no response is
-	// obtained from the other end.
-	tcpKeepaliveCount = 9
-
-	// tcpKeepaliveIdle specifies the time a connection
-	// must remain idle before the first TCP keepalive
-	// packet is sent. Once this time is reached,
-	// tcpKeepaliveInterval option is used instead.
-	tcpKeepaliveIdle = 60 * time.Second
-
-	// tcpKeepaliveInterval specifies the interval
-	// time between sending TCP keepalive packets.
-	tcpKeepaliveInterval = 30 * time.Second
+	defaultNIC           tcpip.NICID = 1
+	defaultWndSize                   = 0
+	maxConnAttempts                  = 2 << 10
+	tcpKeepaliveCount                = 9
+	tcpKeepaliveIdle                 = 60 * time.Second
+	tcpKeepaliveInterval             = 30 * time.Second
 )
 
 type gVisor struct {
@@ -64,6 +46,7 @@ func NewGVisor(
 ) (Stack, error) {
 	log.Debug("Creating new gVisor stack")
 	return &gVisor{
+		handler: options.Handler,
 		options: options,
 	}, nil
 }
@@ -110,9 +93,7 @@ func newGVisorStack(ep stack.LinkEndpoint) (*stack.Stack, error) {
 }
 
 func (t *gVisor) Start(ctx context.Context) error {
-	linkEndpoint, err := tun.New(&tun.Options{
-		//MTU: t.options.MTU,
-	})
+	linkEndpoint, err := tun.New(t.options.TunOptions)
 	if err != nil {
 		return err
 	}
@@ -122,18 +103,11 @@ func (t *gVisor) Start(ctx context.Context) error {
 	}
 
 	tcpForwarder := tcp.NewForwarder(ipStack, 0, 1024, func(r *tcp.ForwarderRequest) {
-		var wq waiter.Queue
-		handshakeCtx, cancel := context.WithCancel(context.Background())
-		go func() {
-			select {
-			case <-ctx.Done():
-				wq.Notify(wq.Events())
-			case <-handshakeCtx.Done():
-			}
-		}()
-
+		var (
+			wq waiter.Queue
+			id = r.ID()
+		)
 		endpoint, err := r.CreateEndpoint(&wq)
-		cancel()
 		if err != nil {
 			r.Complete(true)
 			return
@@ -142,7 +116,7 @@ func (t *gVisor) Start(ctx context.Context) error {
 
 		err = setSocketOptions(ipStack, endpoint)
 
-		conn := adapter.NewTCPConn(gonet.NewTCPConn(&wq, endpoint), r.ID())
+		conn := adapter.NewTCPConn(gonet.NewTCPConn(&wq, endpoint), id)
 
 		// go t.Handler.NewConnection
 		hErr := t.handler.NewConnection(ctx, conn)
@@ -156,21 +130,19 @@ func (t *gVisor) Start(ctx context.Context) error {
 	ipStack.SetTransportProtocolHandler(tcp.ProtocolNumber, tcpForwarder.HandlePacket)
 
 	udpForwarder := udp.NewForwarder(ipStack, func(r *udp.ForwarderRequest) {
-		var wq waiter.Queue
+		var (
+			wq waiter.Queue
+			id = r.ID()
+		)
 		endpoint, err := r.CreateEndpoint(&wq)
 		if err != nil {
 			return
 		}
 		udpConn := gonet.NewUDPConn(&wq, endpoint)
-		conn := adapter.NewUDPConn(udpConn, r.ID())
+		conn := adapter.NewUDPConn(udpConn, id)
 
 		// go t.Handler.NewPacketConnection
-		hErr := t.handler.NewPacketConnection(ctx, conn)
-
-		if hErr != nil {
-			endpoint.Abort()
-		}
-
+		t.handler.NewPacketConnection(ctx, conn)
 	})
 
 	ipStack.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)

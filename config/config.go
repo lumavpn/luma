@@ -14,6 +14,10 @@ import (
 type Config struct {
 	// General configuration
 	LogLevel log.LogLevel `yaml:"loglevel"`
+
+	Device    string `yaml:"device"`
+	Interface string `yaml:"interface"`
+	MTU       uint32 `yaml:"mtu"`
 }
 
 // New returns a new instance of Config with default values

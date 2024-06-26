@@ -27,7 +27,7 @@ type TUN struct {
 	wMutex sync.Mutex
 }
 
-func New(options *Options) (Device, error) {
+func New(options Options) (Device, error) {
 	t := &TUN{
 		name:   options.Name,
 		mtu:    options.MTU,
