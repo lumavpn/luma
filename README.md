@@ -6,11 +6,10 @@ Please refer to our website luma.net for additional information how the service 
 
 ## Features
 
-- Proxy protocols: SOCKS5, HTTP(S), Wireguard
+- Proxy Protocols: SOCKS5, HTTP(S), Wireguard
+- Rule-based Routing: dynamic scripting, domain, IP addresses, process name and more
 - Server selection
 - Lightweight GUI
-- Lightweight GUI
-- Split tunneling
 - Custom DNS
 
 ## Download latest release
