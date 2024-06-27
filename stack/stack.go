@@ -16,8 +16,8 @@ type Stack interface {
 type Options struct {
 	Handler Handler
 	Stack   StackType
-
-	Device tun.Device
+	Tun     tun.Tun
+	Device  tun.Device
 
 	//TunOptions tun.Options
 }

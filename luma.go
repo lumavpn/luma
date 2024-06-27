@@ -23,7 +23,7 @@ type Luma struct {
 
 	stack stack.Stack
 	// Tunnel
-	device tun.Device
+	device tun.Tun
 	tunnel tunnel.Tunnel
 
 	mu sync.Mutex
@@ -69,7 +69,7 @@ func (lu *Luma) Start(ctx context.Context) error {
 	lu.SetDevice(device)
 
 	stack, err := stack.New(&stack.Options{
-		Device:  device,
+		Tun:     device,
 		Handler: lu,
 		Stack:   stack.TunGVisor,
 	})
@@ -87,7 +87,7 @@ func (lu *Luma) Start(ctx context.Context) error {
 	return nil
 }
 
-func (lu *Luma) SetDevice(d tun.Device) {
+func (lu *Luma) SetDevice(d tun.Tun) {
 	lu.mu.Lock()
 	lu.device = d
 	lu.mu.Unlock()

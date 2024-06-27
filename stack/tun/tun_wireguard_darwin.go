@@ -1,4 +1,4 @@
-//go:build with_gvisor && darwin
+//go:build with_wireguard && with_gvisor && darwin
 
 package tun
 

@@ -37,7 +37,7 @@ const (
 type gVisor struct {
 	handler  Handler
 	options  *Options
-	tun      tun.Device
+	tun      tun.GVisorTun
 	stack    *stack.Stack
 	endpoint stack.LinkEndpoint
 }
@@ -45,12 +45,13 @@ type gVisor struct {
 func NewGVisor(
 	options *Options,
 ) (Stack, error) {
-	if options.Device == nil {
-		return nil, errors.New("Missing device")
+	gTun, isGTun := options.Tun.(tun.GVisorTun)
+	if !isGTun {
+		return nil, errors.New("gVisor stack is unsupported on current platform")
 	}
 	log.Debug("Creating new gVisor stack")
 	return &gVisor{
-		tun:      options.Device,
+		tun:      gTun,
 		endpoint: options.Device,
 		handler:  options.Handler,
 		options:  options,
@@ -99,7 +100,12 @@ func newGVisorStack(ep stack.LinkEndpoint) (*stack.Stack, error) {
 }
 
 func (t *gVisor) Start(ctx context.Context) error {
-	ipStack, err := newGVisorStack(t.endpoint)
+	linkEndpoint, err := t.tun.NewEndpoint()
+	if err != nil {
+		return err
+	}
+
+	ipStack, err := newGVisorStack(linkEndpoint)
 	if err != nil {
 		return err
 	}
@@ -149,6 +155,7 @@ func (t *gVisor) Start(ctx context.Context) error {
 
 	ipStack.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
 
+	t.endpoint = linkEndpoint
 	t.stack = ipStack
 
 	return nil
