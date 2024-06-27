@@ -53,7 +53,7 @@ func (lu *Luma) Start(ctx context.Context) error {
 		}
 		dialer.DefaultInterfaceName.Store(iface.Name)
 		dialer.DefaultInterfaceIndex.Store(int32(iface.Index))
-		log.Infof("[DIALER] bind to interface: %s", cfg.Interface)
+		log.Infof("bind to interface: %s", cfg.Interface)
 	}
 
 	defaultProxy := proxy.NewDirect()
@@ -99,12 +99,14 @@ func (lu *Luma) SetStack(s stack.Stack) {
 	lu.mu.Unlock()
 }
 
+// NewConnection handles new TCP connections
 func (lu *Luma) NewConnection(ctx context.Context, conn adapter.TCPConn) error {
 	log.Debug("New TCP connection")
 	lu.tunnel.HandleTCP(conn)
 	return nil
 }
 
+// NewConnection handles new UDP packets
 func (lu *Luma) NewPacketConnection(ctx context.Context, conn adapter.UDPConn) error {
 	log.Debug("New UDP connection")
 	lu.tunnel.HandleUDP(conn)
@@ -120,10 +122,4 @@ func (lu *Luma) Stop() {
 	if lu.stack != nil {
 		lu.stack.Stop()
 	}
-
-}
-
-// startStack applies the given Config to the instance of Luma to complete setup
-func (lu *Luma) startStack(cfg *config.Config) error {
-	return nil
 }
