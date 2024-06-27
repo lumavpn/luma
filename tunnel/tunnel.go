@@ -15,7 +15,7 @@ type tunnel struct {
 	udpQueue    chan adapter.UDPConn
 }
 
-type Tunnel struct {
+type Tunnel interface {
 	adapter.TransportHandler
 }
 

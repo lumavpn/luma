@@ -17,7 +17,7 @@ type Luma struct {
 	proxies map[string]proxy.Proxy
 
 	// Tunnel
-	tunnel.Tunnel
+	tunnel tunnel.Tunnel
 
 	mu sync.Mutex
 }
