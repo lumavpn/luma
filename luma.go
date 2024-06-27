@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net"
+	"net/netip"
 	"sync"
 
 	"github.com/lumavpn/luma/adapter"
@@ -25,8 +26,9 @@ type Luma struct {
 
 	stack stack.Stack
 	// Tunnel
-	device tun.Tun
-	tunnel tunnel.Tunnel
+	device  tun.Tun
+	tunName string
+	tunnel  tunnel.Tunnel
 
 	mu sync.Mutex
 }
@@ -138,5 +140,26 @@ func (lu *Luma) Stop() {
 	}
 	if lu.stack != nil {
 		lu.stack.Stop()
+	}
+}
+
+func (lu *Luma) FlushDefaultInterface() {
+	targetInterface := dialer.DefaultInterfaceName.Load()
+	for _, destination := range []netip.Addr{netip.IPv4Unspecified(), netip.IPv6Unspecified(), netip.MustParseAddr("1.1.1.1")} {
+		autoDetectInterfaceName := "en0"
+		if autoDetectInterfaceName == lu.tunName {
+			log.Warnf("[TUN] Auto detect interface by %s get same name with tun", destination.String())
+		} else if autoDetectInterfaceName == "" || autoDetectInterfaceName == "<nil>" {
+			log.Warnf("[TUN] Auto detect interface by %s get empty name.", destination.String())
+		} else {
+			targetInterface = autoDetectInterfaceName
+			if old := dialer.DefaultInterfaceName.Load(); old != targetInterface {
+				log.Warnf("[TUN] default interface changed by monitor, %s => %s", old, targetInterface)
+
+				dialer.DefaultInterfaceName.Store(targetInterface)
+				//iface.FlushCache()
+			}
+			return
+		}
 	}
 }
