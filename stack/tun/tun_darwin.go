@@ -56,6 +56,12 @@ func New(options Options) (Tun, error) {
 		mtu:     options.MTU,
 		name:    options.Name,
 	}
+	if len(options.Inet4Address) > 0 {
+		nativeTun.inet4Address = options.Inet4Address[0].Addr().As4()
+	}
+	if len(options.Inet6Address) > 0 {
+		nativeTun.inet6Address = options.Inet6Address[0].Addr().As16()
+	}
 	var ok bool
 	nativeTun.tunWriter, ok = bufio.CreateVectorisedWriter(nativeTun.tunFile)
 	if !ok {

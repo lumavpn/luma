@@ -2,7 +2,10 @@ package stack
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
+	"net"
+	"net/netip"
 
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/stack/tun"
@@ -14,11 +17,12 @@ type Stack interface {
 }
 
 type Options struct {
-	Handler Handler
-	Stack   StackType
-	Tun     tun.Tun
-	Device  tun.Device
-
+	Handler      Handler
+	Stack        StackType
+	Tun          tun.Tun
+	Device       tun.Device
+	Inet4Address []netip.Prefix
+	Inet6Address []netip.Prefix
 	//TunOptions tun.Options
 }
 
@@ -45,4 +49,14 @@ func New(options *Options) (Stack, error) {
 	default:
 		return nil, fmt.Errorf("unknown stack: %s", options.Stack)
 	}
+}
+
+func BroadcastAddr(inet4Address []netip.Prefix) netip.Addr {
+	if len(inet4Address) == 0 {
+		return netip.Addr{}
+	}
+	prefix := inet4Address[0]
+	var broadcastAddr [4]byte
+	binary.BigEndian.PutUint32(broadcastAddr[:], binary.BigEndian.Uint32(prefix.Masked().Addr().AsSlice())|^binary.BigEndian.Uint32(net.CIDRMask(prefix.Bits(), 32)))
+	return netip.AddrFrom4(broadcastAddr)
 }

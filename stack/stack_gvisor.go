@@ -7,14 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/netip"
 	"time"
 
-	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/stack/tun"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
@@ -22,7 +21,6 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/transport/icmp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
-	"gvisor.dev/gvisor/pkg/waiter"
 )
 
 const (
@@ -35,6 +33,8 @@ const (
 )
 
 type gVisor struct {
+	broadcastAddr netip.Addr
+
 	handler  Handler
 	options  *Options
 	tun      tun.GVisorTun
@@ -51,11 +51,36 @@ func NewGVisor(
 	}
 	log.Debug("Creating new gVisor stack")
 	return &gVisor{
-		tun:      gTun,
-		endpoint: options.Device,
-		handler:  options.Handler,
-		options:  options,
+		tun:           gTun,
+		endpoint:      options.Device,
+		handler:       options.Handler,
+		broadcastAddr: BroadcastAddr(options.Inet4Address),
+		options:       options,
 	}, nil
+}
+
+func (t *gVisor) Start(ctx context.Context) error {
+	linkEndpoint, err := t.tun.NewEndpoint()
+	if err != nil {
+		return err
+	}
+	linkEndpoint = &LinkEndpointFilter{linkEndpoint, t.broadcastAddr, t.tun}
+
+	ipStack, err := newGVisorStack(linkEndpoint)
+	if err != nil {
+		return err
+	}
+
+	tcpForwarder := tcp.NewForwarder(ipStack, 0, 1024, t.withTCPHandler(ctx, ipStack))
+	ipStack.SetTransportProtocolHandler(tcp.ProtocolNumber, tcpForwarder.HandlePacket)
+
+	udpForwarder := udp.NewForwarder(ipStack, t.withUDPHandler(ctx, ipStack))
+	ipStack.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
+
+	t.endpoint = linkEndpoint
+	t.stack = ipStack
+
+	return nil
 }
 
 func newGVisorStack(ep stack.LinkEndpoint) (*stack.Stack, error) {
@@ -99,68 +124,6 @@ func newGVisorStack(ep stack.LinkEndpoint) (*stack.Stack, error) {
 	return ipStack, nil
 }
 
-func (t *gVisor) Start(ctx context.Context) error {
-	linkEndpoint, err := t.tun.NewEndpoint()
-	if err != nil {
-		return err
-	}
-
-	ipStack, err := newGVisorStack(linkEndpoint)
-	if err != nil {
-		return err
-	}
-
-	tcpForwarder := tcp.NewForwarder(ipStack, 0, 1024, func(r *tcp.ForwarderRequest) {
-		var (
-			wq waiter.Queue
-			id = r.ID()
-		)
-		endpoint, err := r.CreateEndpoint(&wq)
-		if err != nil {
-			r.Complete(true)
-			return
-		}
-		r.Complete(false)
-
-		err = setSocketOptions(ipStack, endpoint)
-
-		conn := adapter.NewTCPConn(gonet.NewTCPConn(&wq, endpoint), id)
-
-		// go t.Handler.NewConnection
-		hErr := t.handler.NewConnection(ctx, conn)
-
-		if hErr != nil {
-			endpoint.Abort()
-		}
-
-	})
-
-	ipStack.SetTransportProtocolHandler(tcp.ProtocolNumber, tcpForwarder.HandlePacket)
-
-	udpForwarder := udp.NewForwarder(ipStack, func(r *udp.ForwarderRequest) {
-		var (
-			wq waiter.Queue
-			id = r.ID()
-		)
-		endpoint, err := r.CreateEndpoint(&wq)
-		if err != nil {
-			return
-		}
-		udpConn := gonet.NewUDPConn(&wq, endpoint)
-		conn := adapter.NewUDPConn(udpConn, id)
-
-		// go t.Handler.NewPacketConnection
-		t.handler.NewPacketConnection(ctx, conn)
-	})
-
-	ipStack.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
-
-	t.endpoint = linkEndpoint
-	t.stack = ipStack
-
-	return nil
-}
-
 func setSocketOptions(s *stack.Stack, ep tcpip.Endpoint) tcpip.Error {
 	{ /* TCP keepalive options */
 		ep.SocketOptions().SetKeepAlive(true)
@@ -201,6 +164,22 @@ func (t *gVisor) Stop() error {
 		endpoint.Abort()
 	}
 	return nil
+}
+
+func AddressFromAddr(destination netip.Addr) tcpip.Address {
+	if destination.Is6() {
+		return tcpip.AddrFrom16(destination.As16())
+	} else {
+		return tcpip.AddrFrom4(destination.As4())
+	}
+}
+
+func AddrFromAddress(address tcpip.Address) netip.Addr {
+	if address.Len() == 16 {
+		return netip.AddrFrom16(address.As16())
+	} else {
+		return netip.AddrFrom4(address.As4())
+	}
 }
 
 func wrapStackError(err tcpip.Error) error {

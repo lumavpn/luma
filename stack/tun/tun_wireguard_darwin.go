@@ -9,14 +9,47 @@ import (
 	"github.com/lumavpn/luma/common/pool"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/stack/device/iobased"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 
 	"golang.zx2c4.com/wireguard/tun"
 )
 
-type TUN struct {
+var _ GVisorTun = (*NativeTun)(nil)
+
+func (t *NativeTun) NewEndpoint() (stack.LinkEndpoint, error) {
+	e := &DarwinEndpoint{
+		name:   t.name,
+		mtu:    t.mtu,
+		offset: offset,
+		rSizes: make([]int, 1),
+		rBuffs: make([][]byte, 1),
+		wBuffs: make([][]byte, 1),
+	}
+	forcedMTU := defaultMTU
+	if t.mtu > 0 {
+		forcedMTU = int(t.mtu)
+	}
+	log.Debug("Opening wireguard tun..")
+	nt, err := createTUN(t.name, forcedMTU)
+	if err != nil {
+		return nil, fmt.Errorf("create tun: %w", err)
+	}
+	e.tun = nt.(*tun.NativeTun)
+	ep, err := iobased.New(t, t.mtu, offset)
+	if err != nil {
+		return nil, fmt.Errorf("create endpoint: %w", err)
+	}
+	e.Endpoint = ep
+
+	return e, nil
+}
+
+var _ stack.LinkEndpoint = (*DarwinEndpoint)(nil)
+
+type DarwinEndpoint struct {
 	*iobased.Endpoint
 
-	nt     *tun.NativeTun
+	tun    *tun.NativeTun
 	mtu    uint32
 	name   string
 	offset int
@@ -28,60 +61,31 @@ type TUN struct {
 	wMutex sync.Mutex
 }
 
-func New(options Options) (Tun, error) {
-	t := &TUN{
-		name:   options.Name,
-		mtu:    options.MTU,
-		offset: offset,
-		rSizes: make([]int, 1),
-		rBuffs: make([][]byte, 1),
-		wBuffs: make([][]byte, 1),
-	}
-
-	forcedMTU := defaultMTU
-	if t.mtu > 0 {
-		forcedMTU = int(t.mtu)
-	}
-	log.Debug("Opening wireguard tun..")
-	nt, err := createTUN(t.name, forcedMTU)
-	if err != nil {
-		return nil, fmt.Errorf("create tun: %w", err)
-	}
-	t.nt = nt.(*tun.NativeTun)
-	ep, err := iobased.New(t, t.mtu, offset)
-	if err != nil {
-		return nil, fmt.Errorf("create endpoint: %w", err)
-	}
-	t.Endpoint = ep
-
-	return t, nil
-}
-
-func (t *TUN) Read(packet []byte) (int, error) {
+func (t *DarwinEndpoint) Read(packet []byte) (int, error) {
 	t.rMutex.Lock()
 	defer t.rMutex.Unlock()
 	t.rBuffs[0] = packet
-	_, err := t.nt.Read(t.rBuffs, t.rSizes, t.offset)
+	_, err := t.tun.Read(t.rBuffs, t.rSizes, t.offset)
 	return t.rSizes[0], err
 }
 
-func (t *TUN) Write(packet []byte) (int, error) {
+func (t *DarwinEndpoint) Write(packet []byte) (int, error) {
 	t.wMutex.Lock()
 	defer t.wMutex.Unlock()
 	t.wBuffs[0] = packet
-	return t.nt.Write(t.wBuffs, t.offset)
+	return t.tun.Write(t.wBuffs, t.offset)
 }
 
-func (t *TUN) Name() string {
-	name, _ := t.nt.Name()
+func (t *DarwinEndpoint) Name() string {
+	name, _ := t.tun.Name()
 	return name
 }
 
-func (t *TUN) WriteVectorised(buffers []*pool.Buffer) error {
+func (t *DarwinEndpoint) WriteVectorised(buffers []*pool.Buffer) error {
 	return nil
 }
 
-func (t *TUN) Close() error {
+func (t *DarwinEndpoint) Close() {
 	defer t.Endpoint.Close()
-	return t.nt.Close()
+	t.tun.Close()
 }
