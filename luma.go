@@ -3,8 +3,10 @@ package luma
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/netip"
+	"strings"
 	"sync"
 
 	"github.com/lumavpn/luma/adapter"
@@ -16,6 +18,7 @@ import (
 	"github.com/lumavpn/luma/stack"
 	"github.com/lumavpn/luma/stack/tun"
 	"github.com/lumavpn/luma/tunnel"
+	"github.com/lumavpn/luma/util"
 )
 
 type Luma struct {
@@ -27,6 +30,7 @@ type Luma struct {
 	stack stack.Stack
 	// Tunnel
 	device  tun.Tun
+	dnsAdds []netip.AddrPort
 	tunName string
 	tunnel  tunnel.Tunnel
 
@@ -63,6 +67,29 @@ func (lu *Luma) Start(ctx context.Context) error {
 	defaultProxy := proxy.NewDirect()
 	proxy.SetDialer(defaultProxy)
 
+	tunName := cfg.Device
+	if tunName == "" || !checkTunName(tunName) {
+		tunName = util.CalculateInterfaceName("Luma")
+		log.Debugf("Setting tun device name to %s", tunName)
+		cfg.Device = tunName
+	}
+
+	var dnsAdds []netip.AddrPort
+
+	for _, d := range cfg.DNSHijack {
+		if _, after, ok := strings.Cut(d, "://"); ok {
+			d = after
+		}
+		d = strings.Replace(d, "any", "0.0.0.0", 1)
+		addrPort, err := netip.ParseAddrPort(d)
+		if err != nil {
+			return fmt.Errorf("parse dns-hijack url error: %w", err)
+		}
+
+		dnsAdds = append(dnsAdds, addrPort)
+	}
+	lu.SetDnsAdds(dnsAdds)
+
 	device, err := tun.New(tun.Options{
 		AutoRoute: true,
 		Name:      cfg.Device,
@@ -91,6 +118,12 @@ func (lu *Luma) Start(ctx context.Context) error {
 	lu.SetStack(stack)
 	log.Debug("Luma successfully started")
 	return nil
+}
+
+func (lu *Luma) SetDnsAdds(dnsAdds []netip.AddrPort) {
+	lu.mu.Lock()
+	lu.dnsAdds = dnsAdds
+	lu.mu.Unlock()
 }
 
 func (lu *Luma) SetDevice(d tun.Tun) {
