@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/lumavpn/luma/common/bufio"
 	"github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
 	"github.com/lumavpn/luma/log"
@@ -55,7 +56,11 @@ func New(options Options) (Tun, error) {
 		tunFile: os.NewFile(uintptr(tunFd), "utun"),
 		mtu:     options.MTU,
 	}
-
+	var ok bool
+	nativeTun.tunWriter, ok = bufio.CreateVectorisedWriter(nativeTun.tunFile)
+	if !ok {
+		panic("create vectorised writer")
+	}
 	return nativeTun, nil
 }
 
@@ -240,6 +245,7 @@ func configure(tunFd int, ifIndex int, name string, options Options) error {
 				return fmt.Errorf("add route: %v", routeRange)
 			}
 		}
+		flushDNSCache()
 	}
 	return nil
 }

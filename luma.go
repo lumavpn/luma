@@ -2,6 +2,7 @@ package luma
 
 import (
 	"context"
+	"encoding/json"
 	"net"
 	"sync"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/dialer"
 	"github.com/lumavpn/luma/log"
+	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/stack"
 	"github.com/lumavpn/luma/stack/tun"
@@ -60,8 +62,9 @@ func (lu *Luma) Start(ctx context.Context) error {
 	proxy.SetDialer(defaultProxy)
 
 	device, err := tun.New(tun.Options{
-		Name: cfg.Device,
-		MTU:  tunMTU,
+		AutoRoute: true,
+		Name:      cfg.Device,
+		MTU:       tunMTU,
 	})
 	if err != nil {
 		return err
@@ -100,9 +103,23 @@ func (lu *Luma) SetStack(s stack.Stack) {
 }
 
 // NewConnection handles new TCP connections
-func (lu *Luma) NewConnection(ctx context.Context, conn adapter.TCPConn) error {
-	log.Debug("New TCP connection")
-	lu.tunnel.HandleTCP(conn)
+func (lu *Luma) NewConnection(ctx context.Context, c adapter.TCPConn) error {
+	tcpConn := c.Conn()
+	lAddr := tcpConn.RemoteAddr()
+	rAddr := tcpConn.LocalAddr()
+	if lAddr == nil || rAddr == nil {
+		log.Debug("No left or right address")
+		return nil
+	}
+	source := M.ParseSocksAddrFromNet(lAddr)
+	destination := M.ParseSocksAddrFromNet(rAddr)
+	v := map[string]any{
+		"source":      source,
+		"destination": destination,
+	}
+	b, _ := json.Marshal(v)
+	log.Debugf("New TCP connection, metadata is %s", string(b))
+	lu.tunnel.HandleTCP(c)
 	return nil
 }
 

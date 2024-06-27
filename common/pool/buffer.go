@@ -76,3 +76,19 @@ func With(data []byte) *Buffer {
 func (b *Buffer) Byte(index int) byte {
 	return b.data[b.start+index]
 }
+
+func (b *Buffer) Bytes() []byte {
+	return b.data[b.start:b.end]
+}
+
+func (b *Buffer) Start() int {
+	return b.start
+}
+
+func (b *Buffer) Len() int {
+	return b.end - b.start
+}
+
+func (b *Buffer) FreeBytes() []byte {
+	return b.data[b.end:b.capacity]
+}

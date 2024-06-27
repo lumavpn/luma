@@ -30,6 +30,9 @@ luma:
 luma-with-gvisor: BUILD_TAGS += with_gvisor
 luma-with-gvisor: luma
 
+luma-with-wireguard: BUILD_TAGS += with_wireguard
+luma-with-wireguard: luma-with-gvisor
+
 test:
 	$(GO) test -v ./...
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/lumavpn/luma/common/pool"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/stack/device/iobased"
 
@@ -27,7 +28,7 @@ type TUN struct {
 	wMutex sync.Mutex
 }
 
-func New(options Options) (Device, error) {
+func New(options Options) (Tun, error) {
 	t := &TUN{
 		name:   options.Name,
 		mtu:    options.MTU,
@@ -76,7 +77,11 @@ func (t *TUN) Name() string {
 	return name
 }
 
-func (t *TUN) Close() {
+func (t *TUN) WriteVectorised(buffers []*pool.Buffer) error {
+	return nil
+}
+
+func (t *TUN) Close() error {
 	defer t.Endpoint.Close()
-	t.nt.Close()
+	return t.nt.Close()
 }

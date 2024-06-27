@@ -1,6 +1,10 @@
+//go:build !with_wireguard && with_gvisor && darwin
+
 package tun
 
 import (
+	"github.com/lumavpn/luma/common/bufio"
+
 	"gvisor.dev/gvisor/pkg/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -123,7 +127,7 @@ func (e *DarwinEndpoint) ParseHeader(ptr *stack.PacketBuffer) bool {
 func (e *DarwinEndpoint) WritePackets(packetBufferList stack.PacketBufferList) (int, tcpip.Error) {
 	var n int
 	for _, packet := range packetBufferList.AsSlice() {
-		err := e.writePacket(packet)
+		_, err := bufio.WriteVectorised(e.tun, packet.AsSlices())
 		if err != nil {
 			return n, &tcpip.ErrAborted{}
 		}
@@ -132,8 +136,7 @@ func (e *DarwinEndpoint) WritePackets(packetBufferList stack.PacketBufferList) (
 	return n, nil
 }
 
-// writePacket writes outbound packets to the io.Writer.
-func (e *DarwinEndpoint) writePacket(pkt *stack.PacketBuffer) tcpip.Error {
-	// UNIMPLEMENTED
+// WritePacket writes outbound packets
+func (e *DarwinEndpoint) WritePacket(pkt *stack.PacketBuffer) tcpip.Error {
 	return nil
 }
