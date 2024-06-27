@@ -25,6 +25,7 @@ type Options struct {
 	GSO            bool
 	AutoRoute      bool
 	StrictRoute    bool
+	WireGuard      bool
 }
 
 type GVisorTun interface {

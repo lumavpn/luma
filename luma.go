@@ -67,6 +67,7 @@ func (lu *Luma) Start(ctx context.Context) error {
 		AutoRoute: true,
 		Name:      cfg.Device,
 		MTU:       tunMTU,
+		WireGuard: true,
 	})
 	if err != nil {
 		return err

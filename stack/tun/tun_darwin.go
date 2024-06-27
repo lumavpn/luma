@@ -1,5 +1,3 @@
-//go:build !with_wireguard && darwin
-
 package tun
 
 import (
@@ -25,13 +23,20 @@ type NativeTun struct {
 	tunFile      *os.File
 	tunWriter    network.VectorisedWriter
 	mtu          uint32
+	name         string
 	inet4Address [4]byte
 	inet6Address [16]byte
 }
 
 func New(options Options) (Tun, error) {
 	var tunFd int
-	if options.FileDescriptor == 0 {
+	if options.WireGuard {
+		return &NativeTun{
+			mtu:  options.MTU,
+			name: options.Name,
+		}, nil
+	}
+	if !options.WireGuard && options.FileDescriptor == 0 {
 		ifIndex := -1
 		_, err := fmt.Sscanf(options.Name, "utun%d", &ifIndex)
 		if err != nil {
@@ -48,6 +53,8 @@ func New(options Options) (Tun, error) {
 			unix.Close(tunFd)
 			return nil, err
 		}
+	} else if options.WireGuard {
+
 	} else {
 		tunFd = options.FileDescriptor
 	}
@@ -55,6 +62,7 @@ func New(options Options) (Tun, error) {
 	nativeTun := &NativeTun{
 		tunFile: os.NewFile(uintptr(tunFd), "utun"),
 		mtu:     options.MTU,
+		name:    options.Name,
 	}
 	var ok bool
 	nativeTun.tunWriter, ok = bufio.CreateVectorisedWriter(nativeTun.tunFile)
