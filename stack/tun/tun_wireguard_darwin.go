@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/lumavpn/luma/common/pool"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/stack/device/iobased"
+	"github.com/sagernet/sing/common/buf"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 
 	"golang.zx2c4.com/wireguard/tun"
@@ -81,7 +81,7 @@ func (t *DarwinEndpoint) Name() string {
 	return name
 }
 
-func (t *DarwinEndpoint) WriteVectorised(buffers []*pool.Buffer) error {
+func (t *DarwinEndpoint) WriteVectorised(buffers []*buf.Buffer) error {
 	return nil
 }
 

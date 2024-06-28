@@ -9,14 +9,19 @@ import (
 	"sync"
 
 	"github.com/lumavpn/luma/adapter"
+	"github.com/lumavpn/luma/common/network"
+	"github.com/lumavpn/luma/common/pool"
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/dialer"
 	"github.com/lumavpn/luma/log"
+	"github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
+	"github.com/lumavpn/luma/proxy/inbound"
 	"github.com/lumavpn/luma/stack"
 	"github.com/lumavpn/luma/stack/tun"
 	"github.com/lumavpn/luma/tunnel"
 	"github.com/lumavpn/luma/util"
+	"github.com/sagernet/sing/common/bufio"
 )
 
 type Luma struct {
@@ -158,13 +163,55 @@ func (lu *Luma) NewConnection(ctx context.Context, c adapter.TCPConn) error {
 
 // NewConnection handles new UDP packets
 func (lu *Luma) NewPacketConnection(ctx context.Context, c adapter.UDPConn) error {
-
-	conn := c.Conn()
 	log.Debugf("New UDP connection, metadata is %s", c.Metadata().FiveTuple())
-	defer func() { _ = conn.Close() }()
-	log.Debug("NewPacketConnection called")
-	//mutex := sync.Mutex{}
-	//lu.tunnel.HandleUDP(adapter.NewPacketAdapter(c, metadata))
+	mutex := sync.Mutex{}
+	conn := c.Conn()
+	conn2 := bufio.NewNetPacketConn(conn)
+	defer func() {
+		mutex.Lock()
+		defer mutex.Unlock()
+		conn2 = nil
+	}()
+	rwOptions := network.ReadWaitOptions{}
+	readWaiter, isReadWaiter := bufio.CreatePacketReadWaiter(conn)
+	if isReadWaiter {
+		readWaiter.InitializeReadWaiter(rwOptions)
+	}
+	for {
+		var (
+			buff *pool.Buffer
+			dest metadata.Socksaddr
+			err  error
+		)
+		if isReadWaiter {
+			buff, dest, err = readWaiter.WaitReadPacket()
+		} else {
+			buff = rwOptions.NewPacketBuffer()
+			dest, err = conn.ReadPacket(buff)
+			if buff != nil {
+				rwOptions.PostReturn(buff)
+			}
+		}
+		if err != nil {
+			buff.Release()
+			if ShouldIgnorePacketError(err) {
+				break
+			}
+			return err
+		}
+
+		m := c.Metadata()
+		inbound.WithOptions(m, inbound.WithDstAddr(dest))
+
+		cPacket := &packet{
+			conn:  &conn2,
+			mutex: &mutex,
+			rAddr: m.Source.UDPAddr(),
+			lAddr: conn.LocalAddr(),
+			buff:  buff,
+		}
+		lu.tunnel.HandleUDP(adapter.NewPacketAdapter(cPacket, m))
+	}
 	return nil
 }
 
@@ -198,4 +245,8 @@ func (lu *Luma) FlushDefaultInterface() {
 			return
 		}
 	}
+}
+
+func ShouldIgnorePacketError(err error) bool {
+	return false
 }

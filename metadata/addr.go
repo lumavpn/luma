@@ -24,6 +24,24 @@ func (ap Socksaddr) IsIP() bool {
 	return ap.Addr.IsValid()
 }
 
+func (ap Socksaddr) IsIPv4() bool {
+	return ap.Addr.Is4()
+}
+
+func (ap Socksaddr) IsIPv6() bool {
+	return ap.Addr.Is6()
+}
+
+func (ap Socksaddr) Unwrap() Socksaddr {
+	if ap.Addr.Is4In6() {
+		return Socksaddr{
+			Addr: netip.AddrFrom4(ap.Addr.As4()),
+			Port: ap.Port,
+		}
+	}
+	return ap
+}
+
 func (ap Socksaddr) IsFqdn() bool {
 	return IsDomainName(ap.Fqdn)
 }
@@ -120,6 +138,10 @@ func parseSocksAddr(address string) Socksaddr {
 			Port: uint16(port),
 		}
 	}
+}
+
+func SocksaddrFrom(addr netip.Addr, port uint16) Socksaddr {
+	return SocksaddrFromNetIP(netip.AddrPortFrom(addr, port))
 }
 
 func ParseSocksAddrFromNet(ap net.Addr) Socksaddr {

@@ -38,7 +38,8 @@ func (t *gVisor) withUDPHandler(ctx context.Context, ipStack *stack.Stack) func(
 				Source:      M.ParseSocksAddrFromNet(lAddr),
 				Destination: M.ParseSocksAddrFromNet(rAddr),
 			}
-			inbound.WithOptions(m, inbound.WithDstAddr(m.Destination), inbound.WithSrcAddr(m.Source), inbound.WithLocalAddr(udpConn.LocalAddr()))
+			inbound.WithOptions(m, inbound.WithDstAddr(m.Destination), inbound.WithSrcAddr(m.Source),
+				inbound.WithLocalAddr(udpConn.LocalAddr()))
 			hErr := t.handler.NewPacketConnection(ctx, adapter.NewUDPConn(gConn, m))
 			if hErr != nil {
 				endpoint.Abort()

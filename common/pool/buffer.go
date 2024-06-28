@@ -2,6 +2,8 @@ package pool
 
 import (
 	"bytes"
+	"io"
+	"log"
 	"sync"
 	"sync/atomic"
 )
@@ -71,6 +73,46 @@ func With(data []byte) *Buffer {
 		data:     data,
 		capacity: len(data),
 	}
+}
+
+// IsFull indicates whether or not this buffer has reached capacity
+func (b *Buffer) IsFull() bool {
+	return b.end == b.capacity
+}
+
+func (b *Buffer) Truncate(to int) {
+	b.end = b.start + to
+}
+
+func (b *Buffer) Write(data []byte) (n int, err error) {
+	if len(data) == 0 {
+		return
+	}
+	if b.IsFull() {
+		return 0, io.ErrShortBuffer
+	}
+	n = copy(b.data[b.end:b.capacity], data)
+	b.end += n
+	return
+}
+
+func (b *Buffer) Resize(start, end int) {
+	b.start = start
+	b.end = b.start + end
+}
+
+func (b *Buffer) Reserve(n int) {
+	if n > b.capacity {
+		log.Fatal("buffer overflow: capacity ", b.capacity, ", need ", n)
+	}
+	b.capacity -= n
+}
+
+func (b *Buffer) OverCap(n int) {
+	if b.capacity+n > len(b.data) {
+		log.Fatal("buffer overflow: capacity ", len(b.data), ", need ", b.capacity+n)
+	}
+	b.capacity += n
 }
 
 func (b *Buffer) Byte(index int) byte {
