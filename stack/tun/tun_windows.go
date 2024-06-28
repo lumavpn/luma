@@ -20,7 +20,6 @@ import (
 	"github.com/lumavpn/luma/stack/internal/winsys"
 	"github.com/lumavpn/luma/stack/internal/wintun"
 	"github.com/lumavpn/luma/util"
-	"github.com/sagernet/sing/common/buf"
 
 	"golang.org/x/sys/windows"
 )
@@ -454,7 +453,7 @@ func (t *NativeTun) write(packetElementList [][]byte) (n int, err error) {
 	return 0, fmt.Errorf("write failed: %w", err)
 }
 
-func (t *NativeTun) WriteVectorised(buffers []*buf.Buffer) error {
+func (t *NativeTun) WriteVectorised(buffers []*pool.Buffer) error {
 	defer pool.ReleaseMulti(buffers)
 	return util.Error(t.write(pool.ToSliceMulti(buffers)))
 }

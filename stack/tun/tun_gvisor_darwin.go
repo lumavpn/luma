@@ -3,7 +3,7 @@
 package tun
 
 import (
-	"github.com/sagernet/sing/common/bufio"
+	"github.com/lumavpn/luma/common/bufio"
 	"gvisor.dev/gvisor/pkg/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"

@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/lumavpn/luma/adapter"
+	"github.com/lumavpn/luma/common/bufio"
 	"github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
 	"github.com/lumavpn/luma/config"
@@ -21,7 +22,6 @@ import (
 	"github.com/lumavpn/luma/stack/tun"
 	"github.com/lumavpn/luma/tunnel"
 	"github.com/lumavpn/luma/util"
-	"github.com/sagernet/sing/common/bufio"
 )
 
 type Luma struct {

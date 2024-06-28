@@ -5,13 +5,13 @@ import (
 	"net"
 	"sync"
 
+	"github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
-	"github.com/lumavpn/luma/conn"
 	M "github.com/lumavpn/luma/metadata"
 )
 
 type packet struct {
-	conn  *conn.NetPacketConn
+	conn  *network.NetPacketConn
 	mutex *sync.Mutex
 	rAddr net.Addr
 	lAddr net.Addr

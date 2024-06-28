@@ -23,6 +23,7 @@ type Options struct {
 	Device       tun.Device
 	Inet4Address []netip.Prefix
 	Inet6Address []netip.Prefix
+	UDPTimeout   int64
 	//TunOptions tun.Options
 }
 

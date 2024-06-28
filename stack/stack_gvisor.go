@@ -35,11 +35,12 @@ const (
 type gVisor struct {
 	broadcastAddr netip.Addr
 
-	handler  Handler
-	options  *Options
-	tun      tun.GVisorTun
-	stack    *stack.Stack
-	endpoint stack.LinkEndpoint
+	handler    Handler
+	options    *Options
+	tun        tun.GVisorTun
+	udpTimeout int64
+	stack      *stack.Stack
+	endpoint   stack.LinkEndpoint
 }
 
 func NewGVisor(
@@ -53,6 +54,7 @@ func NewGVisor(
 	return &gVisor{
 		tun:           gTun,
 		endpoint:      options.Device,
+		udpTimeout:    options.UDPTimeout,
 		handler:       options.Handler,
 		broadcastAddr: BroadcastAddr(options.Inet4Address),
 		options:       options,

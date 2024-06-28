@@ -8,11 +8,11 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/lumavpn/luma/common/bufio"
+	"github.com/lumavpn/luma/common/network"
+	"github.com/lumavpn/luma/common/pool"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/util"
-	"github.com/sagernet/sing/common/buf"
-	"github.com/sagernet/sing/common/bufio"
-	"github.com/sagernet/sing/common/network"
 	"golang.org/x/net/route"
 	"golang.org/x/sys/unix"
 )
@@ -83,14 +83,14 @@ var (
 	packetHeader6 = [4]byte{0x00, 0x00, 0x00, unix.AF_INET6}
 )
 
-func (t *NativeTun) WriteVectorised(buffers []*buf.Buffer) error {
+func (t *NativeTun) WriteVectorised(buffers []*pool.Buffer) error {
 	var packetHeader []byte
 	if buffers[0].Byte(0)>>4 == 4 {
 		packetHeader = packetHeader4[:]
 	} else {
 		packetHeader = packetHeader6[:]
 	}
-	return t.tunWriter.WriteVectorised(append([]*buf.Buffer{buf.As(packetHeader)}, buffers...))
+	return t.tunWriter.WriteVectorised(append([]*pool.Buffer{pool.As(packetHeader)}, buffers...))
 }
 
 func (t *NativeTun) Close() error {

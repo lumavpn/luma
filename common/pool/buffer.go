@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"io"
 	"log"
+	"net"
 	"sync"
 	"sync/atomic"
 )
+
+const debugEnabled = false
 
 var bufferPool = sync.Pool{New: func() any { return &bytes.Buffer{} }}
 
@@ -75,6 +78,14 @@ func With(data []byte) *Buffer {
 	}
 }
 
+func (b *Buffer) FreeLen() int {
+	return b.capacity - b.end
+}
+
+func (b *Buffer) IsEmpty() bool {
+	return b.end-b.start == 0
+}
+
 // IsFull indicates whether or not this buffer has reached capacity
 func (b *Buffer) IsFull() bool {
 	return b.end == b.capacity
@@ -99,6 +110,15 @@ func (b *Buffer) Write(data []byte) (n int, err error) {
 func (b *Buffer) Resize(start, end int) {
 	b.start = start
 	b.end = b.start + end
+}
+
+func (b *Buffer) ReadPacketFrom(r net.PacketConn) (int64, net.Addr, error) {
+	if b.IsFull() {
+		return 0, nil, io.ErrShortBuffer
+	}
+	n, addr, err := r.ReadFrom(b.FreeBytes())
+	b.end += n
+	return int64(n), addr, err
 }
 
 func (b *Buffer) Reserve(n int) {
@@ -133,4 +153,28 @@ func (b *Buffer) Len() int {
 
 func (b *Buffer) FreeBytes() []byte {
 	return b.data[b.end:b.capacity]
+}
+
+func (b *Buffer) IncRef() {
+	b.refs.Add(1)
+}
+
+func (b *Buffer) DecRef() {
+	b.refs.Add(-1)
+}
+
+func (b *Buffer) Leak() {
+	if debugEnabled {
+		if b == nil || !b.managed {
+			return
+		}
+		refs := b.refs.Load()
+		if refs == 0 {
+			panic("leaking buffer")
+		} else {
+			log.Fatal("leaking buffer with ", refs, " references")
+		}
+	} else {
+		b.Release()
+	}
 }

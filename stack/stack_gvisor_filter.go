@@ -5,8 +5,8 @@ package stack
 import (
 	"net/netip"
 
+	"github.com/lumavpn/luma/common/bufio"
 	N "github.com/lumavpn/luma/common/network"
-	"github.com/sagernet/sing/common/bufio"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
