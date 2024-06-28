@@ -79,7 +79,7 @@ func (lu *Luma) Start(ctx context.Context) error {
 
 	var dnsAdds []netip.AddrPort
 
-	for _, d := range cfg.DNSHijack {
+	for _, d := range cfg.Tun.DNSHijack {
 		if _, after, ok := strings.Cut(d, "://"); ok {
 			d = after
 		}
@@ -94,10 +94,16 @@ func (lu *Luma) Start(ctx context.Context) error {
 	lu.SetDnsAdds(dnsAdds)
 
 	device, err := tun.New(tun.Options{
-		AutoRoute: true,
-		Name:      cfg.Device,
-		MTU:       tunMTU,
-		WireGuard: true,
+		AutoRoute:                cfg.Tun.AutoRoute,
+		Name:                     cfg.Device,
+		MTU:                      tunMTU,
+		WireGuard:                true,
+		Inet4RouteAddress:        cfg.Tun.Inet4RouteAddress,
+		Inet6RouteAddress:        cfg.Tun.Inet6RouteAddress,
+		Inet4Address:             cfg.Tun.Inet4Address,
+		Inet6Address:             cfg.Tun.Inet6Address,
+		Inet4RouteExcludeAddress: cfg.Tun.Inet4RouteExcludeAddress,
+		Inet6RouteExcludeAddress: cfg.Tun.Inet6RouteExcludeAddress,
 	})
 	if err != nil {
 		return err

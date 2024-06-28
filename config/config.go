@@ -4,10 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/netip"
 	"os"
 	"path/filepath"
 
 	"github.com/lumavpn/luma/log"
+	"github.com/lumavpn/luma/stack"
 	"gopkg.in/yaml.v3"
 )
 
@@ -15,10 +17,28 @@ type Config struct {
 	// General configuration
 	LogLevel log.LogLevel `yaml:"loglevel"`
 
-	Device    string   `yaml:"device"`
-	Interface string   `yaml:"interface"`
-	MTU       uint32   `yaml:"mtu"`
-	DNSHijack []string `yaml:"dns-hijack" json:"dns-hijack"`
+	Device    string `yaml:"device"`
+	Interface string `yaml:"interface"`
+	MTU       uint32 `yaml:"mtu"`
+
+	Tun TunConfig `yaml:"tun" json:"tun"`
+}
+
+type TunConfig struct {
+	AutoRoute bool `yaml:"auto-route" json:"auto_route"`
+
+	Enable    bool            `yaml:"enable" json:"enable"`
+	Device    string          `yaml:"device" json:"device"`
+	DNSHijack []string        `yaml:"dns-hijack" json:"dns-hijack"`
+	Interface string          `yaml:"interface" json:"interface"`
+	Stack     stack.StackType `yaml:"stack" json:"stack"`
+
+	Inet4Address             []netip.Prefix `yaml:"inet4-address" json:"inet4-address,omitempty"`
+	Inet6Address             []netip.Prefix `yaml:"inet6-address" json:"inet6-address,omitempty"`
+	Inet4RouteAddress        []netip.Prefix `yaml:"inet4-route-address" json:"inet4_route_address,omitempty"`
+	Inet6RouteAddress        []netip.Prefix `yaml:"inet6-route-address" json:"inet6_route_address,omitempty"`
+	Inet4RouteExcludeAddress []netip.Prefix `yaml:"inet4-route-exclude-address" json:"inet4_route_exclude_address,omitempty"`
+	Inet6RouteExcludeAddress []netip.Prefix `yaml:"inet6-route-exclude-address" json:"inet6_route_exclude_address,omitempty"`
 }
 
 // New returns a new instance of Config with default values
