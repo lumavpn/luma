@@ -1,20 +1,32 @@
 package metadata
 
 import (
+	"fmt"
 	"net"
+	"net/netip"
 	"strconv"
+
+	"github.com/lumavpn/luma/dns"
 )
 
 // Metadata contains metadata of transport protocol sessions.
 type Metadata struct {
 	Network Network `json:"network"`
-	SrcIP   net.IP  `json:"sourceIP"`
-	MidIP   net.IP  `json:"dialerIP"`
-	DstIP   net.IP  `json:"destinationIP"`
-	SrcPort uint16  `json:"sourcePort"`
-	MidPort uint16  `json:"dialerPort"`
-	DstPort uint16  `json:"destinationPort"`
 
+	SrcIP  netip.Addr `json:"sourceIP"`
+	DstIP  netip.Addr `json:"destinationIP"`
+	MidIP  net.IP     `json:"dialerIP"`
+	InName string     `json:"inboundName"`
+	InUser string     `json:"inboundUser"`
+	InIP   netip.Addr `json:"inboundIP"`
+	InPort uint16     `json:"inboundPort,string"`
+
+	SrcPort uint16 `json:"sourcePort"`
+	MidPort uint16 `json:"dialerPort"`
+	DstPort uint16 `json:"destinationPort"`
+	Host    string
+
+	DNSMode     dns.DNSMode `json:"dnsMode"`
 	Source      Socksaddr
 	Destination Socksaddr
 }
@@ -27,28 +39,82 @@ func (m *Metadata) SourceAddress() string {
 	return net.JoinHostPort(m.SrcIP.String(), strconv.FormatUint(uint64(m.SrcPort), 10))
 }
 
+func (m *Metadata) FiveTuple() string {
+	return fmt.Sprintf("[%s] %s -> %s", m.Network.String(), m.Source.String(), m.Destination.String())
+}
+
+func (m *Metadata) Pure() *Metadata {
+	if (m.DNSMode == dns.DNSMapping || m.DNSMode == dns.DNSHosts) && m.DstIP.IsValid() {
+		copyM := *m
+		copyM.Host = ""
+		return &copyM
+	}
+	return m
+}
+
 func (m *Metadata) Addr() net.Addr {
 	return &Addr{metadata: m}
 }
 
-func (m *Metadata) TCPAddr() *net.TCPAddr {
-	if m.Network != TCP || m.DstIP == nil {
+func (m *Metadata) SetRemoteAddr(addr net.Addr) error {
+	if addr == nil {
 		return nil
 	}
-	return &net.TCPAddr{
-		IP:   m.DstIP,
-		Port: int(m.DstPort),
+	if rawAddr, ok := addr.(interface{ RawAddr() net.Addr }); ok {
+		if rawAddr := rawAddr.RawAddr(); rawAddr != nil {
+			if err := m.SetRemoteAddr(rawAddr); err == nil {
+				return nil
+			}
+		}
 	}
+	if addr, ok := addr.(interface{ AddrPort() netip.AddrPort }); ok {
+		if addrPort := addr.AddrPort(); addrPort.Port() != 0 {
+			m.DstPort = addrPort.Port()
+			if addrPort.IsValid() {
+				m.DstIP = addrPort.Addr().Unmap()
+				return nil
+			}
+		}
+	}
+	return m.SetRemoteAddress(addr.String())
+}
+
+func (m *Metadata) SetRemoteAddress(rawAddress string) error {
+	host, port, err := net.SplitHostPort(rawAddress)
+	if err != nil {
+		return err
+	}
+
+	var uint16Port uint16
+	if port, err := strconv.ParseUint(port, 10, 16); err == nil {
+		uint16Port = uint16(port)
+	}
+
+	if ip, err := netip.ParseAddr(host); err != nil {
+		m.Host = host
+		m.DstIP = netip.Addr{}
+	} else {
+		m.Host = ""
+		m.DstIP = ip.Unmap()
+	}
+	m.DstPort = uint16Port
+
+	return nil
+}
+
+func (m *Metadata) Valid() bool {
+	return m.Host != "" || m.DstIP.IsValid()
+}
+
+func (m *Metadata) AddrPort() netip.AddrPort {
+	return netip.AddrPortFrom(m.DstIP.Unmap(), m.DstPort)
 }
 
 func (m *Metadata) UDPAddr() *net.UDPAddr {
-	if m.Network != UDP || m.DstIP == nil {
+	if m.Network != UDP || !m.DstIP.IsValid() {
 		return nil
 	}
-	return &net.UDPAddr{
-		IP:   m.DstIP,
-		Port: int(m.DstPort),
-	}
+	return net.UDPAddrFromAddrPort(m.AddrPort())
 }
 
 // Addr implements the net.Addr interface.

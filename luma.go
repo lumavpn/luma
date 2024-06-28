@@ -2,7 +2,6 @@ package luma
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/netip"
@@ -13,7 +12,6 @@ import (
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/dialer"
 	"github.com/lumavpn/luma/log"
-	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/stack"
 	"github.com/lumavpn/luma/stack/tun"
@@ -140,7 +138,7 @@ func (lu *Luma) SetStack(s stack.Stack) {
 
 // NewConnection handles new TCP connections
 func (lu *Luma) NewConnection(ctx context.Context, c adapter.TCPConn) error {
-	tcpConn := c.Conn()
+	/*tcpConn := c.Conn()
 	lAddr := tcpConn.RemoteAddr()
 	rAddr := tcpConn.LocalAddr()
 	if lAddr == nil || rAddr == nil {
@@ -152,17 +150,21 @@ func (lu *Luma) NewConnection(ctx context.Context, c adapter.TCPConn) error {
 	v := map[string]any{
 		"source":      source,
 		"destination": destination,
-	}
-	b, _ := json.Marshal(v)
-	log.Debugf("New TCP connection, metadata is %s", string(b))
+	}*/
+	log.Debugf("New TCP connection, metadata is %s", c.Metadata().FiveTuple())
 	lu.tunnel.HandleTCP(c)
 	return nil
 }
 
 // NewConnection handles new UDP packets
-func (lu *Luma) NewPacketConnection(ctx context.Context, conn adapter.UDPConn) error {
-	log.Debug("New UDP connection")
-	lu.tunnel.HandleUDP(conn)
+func (lu *Luma) NewPacketConnection(ctx context.Context, c adapter.UDPConn) error {
+
+	conn := c.Conn()
+	log.Debugf("New UDP connection, metadata is %s", c.Metadata().FiveTuple())
+	defer func() { _ = conn.Close() }()
+	log.Debug("NewPacketConnection called")
+	//mutex := sync.Mutex{}
+	//lu.tunnel.HandleUDP(adapter.NewPacketAdapter(c, metadata))
 	return nil
 }
 

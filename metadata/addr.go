@@ -136,7 +136,7 @@ func ParseSocksAddrFromNet(ap net.Addr) Socksaddr {
 	return parseSocksAddr(ap.String())
 }
 
-func parseAddrFromNet(netAddr net.Addr) netip.Addr {
+func ParseAddrFromNet(netAddr net.Addr) netip.Addr {
 	if addr := parseAddrPortFromNet(netAddr); addr.Addr().IsValid() {
 		return addr.Addr()
 	}

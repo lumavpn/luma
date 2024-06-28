@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy/proto"
 )
@@ -14,6 +15,7 @@ const (
 )
 
 type Proxy interface {
+	Dialer
 	// Name returns the name of this proxy
 	Name() string
 	// Addr is the address of the proxy
@@ -24,11 +26,17 @@ type Proxy interface {
 	SupportUDP() bool
 }
 
+type WriteBackProxy interface {
+	adapter.WriteBack
+	UpdateWriteBack(wb adapter.WriteBack)
+}
+
 var _defaultDialer Dialer = &Base{}
 
 type Dialer interface {
 	DialContext(context.Context, *metadata.Metadata) (net.Conn, error)
 	DialUDP(*metadata.Metadata) (net.PacketConn, error)
+	ListenPacketContext(context.Context, *metadata.Metadata) (PacketConn, error)
 }
 
 // SetDialer sets default Dialer.

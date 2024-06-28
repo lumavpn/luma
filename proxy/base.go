@@ -43,3 +43,7 @@ func (b *Base) DialContext(context.Context, *metadata.Metadata) (net.Conn, error
 func (b *Base) DialUDP(*metadata.Metadata) (net.PacketConn, error) {
 	return nil, errors.ErrUnsupported
 }
+
+func (b *Base) ListenPacketContext(context.Context, *metadata.Metadata) (PacketConn, error) {
+	return nil, errors.ErrUnsupported
+}

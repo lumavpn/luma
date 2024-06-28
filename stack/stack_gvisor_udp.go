@@ -6,6 +6,9 @@ import (
 	"context"
 
 	"github.com/lumavpn/luma/adapter"
+	"github.com/lumavpn/luma/metadata"
+	M "github.com/lumavpn/luma/metadata"
+	"github.com/lumavpn/luma/proxy/inbound"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
@@ -14,10 +17,7 @@ import (
 
 func (t *gVisor) withUDPHandler(ctx context.Context, ipStack *stack.Stack) func(r *udp.ForwarderRequest) {
 	return func(r *udp.ForwarderRequest) {
-		var (
-			wq waiter.Queue
-			id = r.ID()
-		)
+		var wq waiter.Queue
 		endpoint, err := r.CreateEndpoint(&wq)
 		if err != nil {
 			return
@@ -30,9 +30,45 @@ func (t *gVisor) withUDPHandler(ctx context.Context, ipStack *stack.Stack) func(
 			return
 		}
 
-		conn := adapter.NewUDPConn(udpConn, id)
+		gConn := &gUDPConn{UDPConn: udpConn}
 
-		// go t.Handler.NewPacketConnection
-		go t.handler.NewPacketConnection(ctx, conn)
+		go func() {
+			m := &metadata.Metadata{
+				Network:     metadata.UDP,
+				Source:      M.ParseSocksAddrFromNet(lAddr),
+				Destination: M.ParseSocksAddrFromNet(rAddr),
+			}
+			inbound.WithOptions(m, inbound.WithDstAddr(m.Destination), inbound.WithSrcAddr(m.Source), inbound.WithLocalAddr(udpConn.LocalAddr()))
+			hErr := t.handler.NewPacketConnection(ctx, adapter.NewUDPConn(gConn, m))
+			if hErr != nil {
+				endpoint.Abort()
+			}
+		}()
 	}
+}
+
+type gUDPConn struct {
+	*gonet.UDPConn
+}
+
+func (c *gUDPConn) Read(b []byte) (n int, err error) {
+	n, err = c.UDPConn.Read(b)
+	if err == nil {
+		return
+	}
+	err = wrapError(err)
+	return
+}
+
+func (c *gUDPConn) Write(b []byte) (n int, err error) {
+	n, err = c.UDPConn.Write(b)
+	if err == nil {
+		return
+	}
+	err = wrapError(err)
+	return
+}
+
+func (c *gUDPConn) Close() error {
+	return c.UDPConn.Close()
 }

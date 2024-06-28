@@ -30,26 +30,10 @@ func (d *Direct) DialContext(ctx context.Context, metadata *metadata.Metadata) (
 	return c, nil
 }
 
-func (d *Direct) DialUDP(m *metadata.Metadata) (net.PacketConn, error) {
+func (d *Direct) ListenPacketContext(ctx context.Context, m *metadata.Metadata) (PacketConn, error) {
 	pc, err := dialer.ListenPacket("udp", "")
 	if err != nil {
 		return nil, err
 	}
-	return &directPacketConn{PacketConn: pc}, nil
-}
-
-type directPacketConn struct {
-	net.PacketConn
-}
-
-func (pc *directPacketConn) WriteTo(b []byte, addr net.Addr) (int, error) {
-	if udpAddr, ok := addr.(*net.UDPAddr); ok {
-		return pc.PacketConn.WriteTo(b, udpAddr)
-	}
-
-	udpAddr, err := net.ResolveUDPAddr("udp", addr.String())
-	if err != nil {
-		return 0, err
-	}
-	return pc.PacketConn.WriteTo(b, udpAddr)
+	return newPacketConn(pc, d), nil
 }

@@ -1,13 +1,12 @@
 package tunnel
 
 import (
-	"io"
+	"context"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/lumavpn/luma/adapter"
-	"github.com/lumavpn/luma/common/pool"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
@@ -16,22 +15,53 @@ import (
 const (
 	// tcpWaitTimeout implements a TCP half-close timeout.
 	tcpWaitTimeout = 60 * time.Second
+
+	defaultTCPTimeout = 5 * time.Second
 )
 
 func (t *tunnel) handleTCPConn(c adapter.TCPConn) {
-	originConn := c.Conn()
-	defer originConn.Close()
+	conn := c.Conn()
+	defer func(c net.Conn) {
+		_ = c.Close()
+	}(conn)
 
-	id := c.ID()
-	m := &metadata.Metadata{
-		Network: metadata.TCP,
-		SrcIP:   net.IP(id.RemoteAddress.AsSlice()),
-		SrcPort: id.RemotePort,
-		DstIP:   net.IP(id.LocalAddress.AsSlice()),
-		DstPort: id.LocalPort,
+	m := c.Metadata()
+	if !m.Valid() {
+		log.Debugf("[Metadata] not valid: %#v", m)
+		return
 	}
 
-	remoteConn, err := proxy.Dial(m)
+	preHandleFailed := false
+	if err := preHandleMetadata(m); err != nil {
+		log.Debugf("[Metadata PreHandle] error: %s", err)
+		preHandleFailed = true
+	}
+
+	// If both trials have failed, we can do nothing but give up
+	if preHandleFailed {
+		log.Debugf("Metadata prehandle failed for connection %s --> %s",
+			m.SourceAddress(), m.DestinationAddress())
+		return
+	}
+
+	peekMutex := sync.Mutex{}
+	if !conn.Peeked() {
+		peekMutex.Lock()
+		go func() {
+			defer peekMutex.Unlock()
+			_ = conn.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
+			_, _ = conn.Peek(1)
+			_ = conn.SetReadDeadline(time.Time{})
+		}()
+	}
+
+	proxy := t.resolveMetadata(m)
+	/*var peekBytes []byte
+	var peekLen int*/
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTCPTimeout)
+	defer cancel()
+
+	remoteConn, err := proxy.DialContext(ctx, m)
 	if err != nil {
 		log.Warnf("[TCP] dial %s: %v", m.DestinationAddress(), err)
 		return
@@ -39,34 +69,13 @@ func (t *tunnel) handleTCPConn(c adapter.TCPConn) {
 	m.MidIP, m.MidPort = parseAddr(remoteConn.LocalAddr())
 
 	log.Infof("[TCP] %s <-> %s", m.SourceAddress(), m.DestinationAddress())
-	pipe(originConn, remoteConn)
+	_ = conn.SetReadDeadline(time.Now()) // stop unfinished peek
+	peekMutex.Lock()
+	defer peekMutex.Unlock()
+	_ = conn.SetReadDeadline(time.Time{}) // reset
+	handleSocket(conn, remoteConn)
 }
 
-// pipe copies copy data to & from provided net.Conn(s) bidirectionally.
-func pipe(origin, remote net.Conn) {
-	wg := sync.WaitGroup{}
-	wg.Add(2)
-
-	go unidirectionalStream(remote, origin, "origin->remote", &wg)
-	go unidirectionalStream(origin, remote, "remote->origin", &wg)
-
-	wg.Wait()
-}
-
-func unidirectionalStream(dst, src net.Conn, dir string, wg *sync.WaitGroup) {
-	defer wg.Done()
-	buf := pool.Get(pool.RelayBufferSize)
-	if _, err := io.CopyBuffer(dst, src, buf); err != nil {
-		log.Debugf("[TCP] copy data for %s: %v", dir, err)
-	}
-	pool.Put(buf)
-	// Do the upload/download side TCP half-close.
-	if cr, ok := src.(interface{ CloseRead() error }); ok {
-		cr.CloseRead()
-	}
-	if cw, ok := dst.(interface{ CloseWrite() error }); ok {
-		cw.CloseWrite()
-	}
-	// Set TCP half-close timeout.
-	dst.SetReadDeadline(time.Now().Add(tcpWaitTimeout))
+func (t *tunnel) resolveMetadata(m *metadata.Metadata) proxy.Proxy {
+	return proxy.NewDirect()
 }
