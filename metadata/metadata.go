@@ -7,11 +7,14 @@ import (
 	"strconv"
 
 	"github.com/lumavpn/luma/dns"
+	"github.com/lumavpn/luma/proxy/proto"
 )
 
 // Metadata contains metadata of transport protocol sessions.
 type Metadata struct {
 	Network Network `json:"network"`
+
+	Proto proto.Proto
 
 	SrcIP  netip.Addr `json:"sourceIP"`
 	DstIP  netip.Addr `json:"destinationIP"`

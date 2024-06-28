@@ -51,3 +51,13 @@ func WithSrcAddr(addr net.Addr) Option {
 		}
 	}
 }
+
+func WithInAddr(addr net.Addr) Option {
+	return func(metadata *M.Metadata) {
+		m := M.Metadata{}
+		if err := m.SetRemoteAddr(addr); err == nil {
+			metadata.InIP = m.DstIP
+			metadata.InPort = m.DstPort
+		}
+	}
+}

@@ -1,3 +1,5 @@
+github.com/database64128/tfo-go/v2 v2.2.1 h1:IFctPnetEQtGo7gI84QfR1pAbi6TRPkxCFyhWQ/qUXY=
+github.com/database64128/tfo-go/v2 v2.2.1/go.mod h1:SI59G6MmmzSm9/fSRTiyYyyInHp4WEF9lTldnm3mxmA=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/gofrs/uuid/v5 v5.2.0 h1:qw1GMx6/y8vhVsx626ImfKMuS5CvJmhIKKtuyvfajMM=
