@@ -61,6 +61,9 @@ func (lu *Luma) Start(ctx context.Context) error {
 		return err
 	}
 	go lu.startLocal(resp.locals, true)
+	if err := lu.updateDNS(cfg.DNS); err != nil {
+		return err
+	}
 
 	return lu.startEngine(ctx)
 }
@@ -164,19 +167,6 @@ func (lu *Luma) SetStack(s stack.Stack) {
 
 // NewConnection handles new TCP connections
 func (lu *Luma) NewConnection(ctx context.Context, c adapter.TCPConn) error {
-	/*tcpConn := c.Conn()
-	lAddr := tcpConn.RemoteAddr()
-	rAddr := tcpConn.LocalAddr()
-	if lAddr == nil || rAddr == nil {
-		log.Debug("No left or right address")
-		return nil
-	}
-	source := M.ParseSocksAddrFromNet(lAddr)
-	destination := M.ParseSocksAddrFromNet(rAddr)
-	v := map[string]any{
-		"source":      source,
-		"destination": destination,
-	}*/
 	log.Debugf("New TCP connection, metadata is %s", c.Metadata().FiveTuple())
 	lu.tunnel.HandleTCP(c)
 	return nil

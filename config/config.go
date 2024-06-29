@@ -24,7 +24,16 @@ type Config struct {
 	Locals  []map[string]any `yaml:"locals"`
 	Proxies []map[string]any `yaml:"proxies"`
 
-	Tun TunConfig `yaml:"tun" json:"tun"`
+	DNS *DNSConfig `yaml:"dns" json:"dns"`
+	Tun TunConfig  `yaml:"tun" json:"tun"`
+}
+
+type DNSConfig struct {
+	Enable      bool           `yaml:"enable"`
+	PreferH3    bool           `yaml:"prefer-h3"`
+	Hosts       map[string]any `yaml:"hosts" json:"hosts"`
+	IPv6        bool           `yaml:"ipv6"`
+	IPv6Timeout uint           `yaml:"ipv6-timeout"`
 }
 
 type TunConfig struct {
