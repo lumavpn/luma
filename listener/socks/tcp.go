@@ -7,8 +7,8 @@ import (
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/conn"
 	"github.com/lumavpn/luma/ipfilter"
-	"github.com/lumavpn/luma/listener"
 	authStore "github.com/lumavpn/luma/listener/auth"
+	"github.com/lumavpn/luma/listener/base"
 	"github.com/lumavpn/luma/proxy/inbound"
 	"github.com/lumavpn/luma/proxy/proto"
 	"github.com/lumavpn/luma/transport/socks4"
@@ -16,22 +16,27 @@ import (
 	"github.com/lumavpn/luma/util"
 )
 
-type socksListener struct {
-	*listener.BaseListener
+type Listener struct {
+	*base.BaseListener
 }
 
-func New(addr string, tunnel adapter.TransportHandler) (*socksListener, error) {
-	base, err := listener.New(listener.BaseOptions{
+func New(addr string, tunnel adapter.TransportHandler, options ...inbound.Option) (*Listener, error) {
+	base, err := base.New(base.BaseOptions{
 		Addr:   addr,
 		Tunnel: tunnel,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &socksListener{base}, nil
+	ss := &Listener{base}
+	if err := ss.ListenTCP(); err != nil {
+		return nil, err
+	}
+	go ss.start(tunnel, options...)
+	return &Listener{base}, nil
 }
 
-func (ss *socksListener) start(tunnel adapter.TransportHandler) {
+func (ss *Listener) start(tunnel adapter.TransportHandler, options ...inbound.Option) {
 	for {
 		c, err := ss.Accept()
 		if err != nil {
@@ -40,11 +45,11 @@ func (ss *socksListener) start(tunnel adapter.TransportHandler) {
 			}
 			continue
 		}
-		go handleSocks(c, tunnel)
+		go handleSocks(c, tunnel, options...)
 	}
 }
 
-func handleSocks(c net.Conn, tunnel adapter.TransportHandler) {
+func handleSocks(c net.Conn, tunnel adapter.TransportHandler, options ...inbound.Option) {
 	util.TCPKeepAlive(c)
 
 	bufConn := conn.NewBufConn(c)
@@ -55,9 +60,9 @@ func handleSocks(c net.Conn, tunnel adapter.TransportHandler) {
 	}
 	switch head[0] {
 	case socks4.Version:
-		handleSocks4(bufConn, tunnel)
+		handleSocks4(bufConn, tunnel, options...)
 	case socks5.Version:
-		handleSocks5(bufConn, tunnel)
+		handleSocks5(bufConn, tunnel, options...)
 	default:
 		c.Close()
 	}

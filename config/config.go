@@ -21,6 +21,8 @@ type Config struct {
 	Interface string `yaml:"interface"`
 	MTU       uint32 `yaml:"mtu"`
 
+	Locals []map[string]any `yaml:"locals"`
+
 	Tun TunConfig `yaml:"tun" json:"tun"`
 }
 

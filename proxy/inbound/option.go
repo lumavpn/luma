@@ -36,6 +36,18 @@ func WithLocalAddr(addr net.Addr) Option {
 	}
 }
 
+func WithSpecialRules(specialRules string) Option {
+	return func(metadata *M.Metadata) {
+		metadata.SpecialRules = specialRules
+	}
+}
+
+func WithSpecialProxy(specialProxy string) Option {
+	return func(metadata *M.Metadata) {
+		metadata.SpecialProxy = specialProxy
+	}
+}
+
 func WithDstAddr(addr net.Addr) Option {
 	return func(metadata *M.Metadata) {
 		_ = metadata.SetRemoteAddr(addr)

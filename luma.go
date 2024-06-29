@@ -14,6 +14,7 @@ import (
 	"github.com/lumavpn/luma/common/pool"
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/dialer"
+	"github.com/lumavpn/luma/local"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
@@ -30,6 +31,8 @@ type Luma struct {
 	// proxies is a map of proxies that Luma is configured to proxy traffic through
 	proxies map[string]proxy.Proxy
 
+	localServers map[string]local.LocalServer
+
 	stack stack.Stack
 	// Tunnel
 	device  tun.Tun
@@ -43,13 +46,25 @@ type Luma struct {
 // New creates a new instance of Luma
 func New(cfg *config.Config) (*Luma, error) {
 	return &Luma{
-		config: cfg,
-		tunnel: tunnel.New(),
+		config:       cfg,
+		localServers: map[string]local.LocalServer{},
+		tunnel:       tunnel.New(),
 	}, nil
 }
 
 // Start starts the default engine running Luma. If there is any issue with the setup process, an error is returned
 func (lu *Luma) Start(ctx context.Context) error {
+	cfg := lu.config
+	resp, err := lu.parseConfig(cfg)
+	if err != nil {
+		return err
+	}
+	lu.startLocalServers(resp.locals, true)
+
+	return lu.startEngine(ctx)
+}
+
+func (lu *Luma) startEngine(ctx context.Context) error {
 	log.Debug("Starting new instance")
 	cfg := lu.config
 	tunMTU := cfg.MTU
@@ -127,6 +142,33 @@ func (lu *Luma) Start(ctx context.Context) error {
 	lu.SetStack(stack)
 	log.Debug("Luma successfully started")
 	return nil
+}
+
+func (lu *Luma) startLocalServers(localServers map[string]local.LocalServer, dropOld bool) {
+	lu.mu.Lock()
+	defer lu.mu.Unlock()
+	for name, newServer := range localServers {
+		if oldServer, ok := lu.localServers[name]; ok {
+			if !oldServer.Config().Equal(newServer.Config()) {
+				_ = oldServer.Close()
+			} else {
+				continue
+			}
+		}
+		if err := newServer.Start(lu.tunnel); err != nil {
+			log.Errorf("Local server %s start err: %s", name, err.Error())
+			continue
+		}
+		lu.localServers[name] = newServer
+	}
+	if dropOld {
+		for name, oldServer := range lu.localServers {
+			if _, ok := localServers[name]; !ok {
+				_ = oldServer.Close()
+				delete(localServers, name)
+			}
+		}
+	}
 }
 
 func (lu *Luma) SetDnsAdds(dnsAdds []netip.AddrPort) {

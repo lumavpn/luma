@@ -24,12 +24,17 @@ type Metadata struct {
 	InIP   netip.Addr `json:"inboundIP"`
 	InPort uint16     `json:"inboundPort,string"`
 
-	SrcPort uint16 `json:"sourcePort"`
-	MidPort uint16 `json:"dialerPort"`
-	DstPort uint16 `json:"destinationPort"`
-	Host    string
+	SpecialProxy string `json:"specialProxy"`
+	SpecialRules string `json:"specialRules"`
+	SrcPort      uint16 `json:"sourcePort"`
+	MidPort      uint16 `json:"dialerPort"`
+	DstPort      uint16 `json:"destinationPort"`
+	Host         string
 
-	DNSMode     dns.DNSMode `json:"dnsMode"`
+	DNSMode dns.DNSMode `json:"dnsMode"`
+
+	RawSrcAddr  net.Addr `json:"-"`
+	RawDstAddr  net.Addr `json:"-"`
 	Source      Socksaddr
 	Destination Socksaddr
 }

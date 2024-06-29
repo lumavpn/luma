@@ -1,0 +1,73 @@
+package local
+
+import (
+	"fmt"
+
+	"github.com/lumavpn/luma/adapter"
+	"github.com/lumavpn/luma/listener/socks"
+	"github.com/lumavpn/luma/log"
+)
+
+type SocksOption struct {
+	BaseOption
+	UDP bool `inbound:"udp,omitempty"`
+}
+
+type Socks struct {
+	*BaseServer
+	config *SocksOption
+	udp    bool
+	stl    *socks.Listener
+	sul    *socks.UDPListener
+}
+
+func NewSocks(options *SocksOption) (*Socks, error) {
+	base, err := NewBase(&options.BaseOption)
+	if err != nil {
+		return nil, err
+	}
+	return &Socks{
+		BaseServer: base,
+		config:     options,
+		udp:        options.UDP,
+	}, nil
+}
+
+func (s *Socks) Close() error {
+	var err error
+	if s.stl != nil {
+		if tcpErr := s.stl.Close(); tcpErr != nil {
+			err = tcpErr
+		}
+	}
+	if s.udp && s.sul != nil {
+		if udpErr := s.sul.Close(); udpErr != nil {
+			if err == nil {
+				err = udpErr
+			} else {
+				return fmt.Errorf("close tcp err: %s, close udp err: %s", err.Error(), udpErr.Error())
+			}
+		}
+	}
+
+	return err
+}
+
+func (s *Socks) Address() string {
+	return s.stl.Address()
+}
+
+func (s *Socks) Start(tunnel adapter.TransportHandler) error {
+	var err error
+	if s.stl, err = socks.New(s.RawAddress(), tunnel, s.Additions()...); err != nil {
+		return err
+	}
+	if s.udp {
+		if s.sul, err = socks.NewUDP(s.RawAddress(), tunnel, s.Additions()...); err != nil {
+			return err
+		}
+	}
+
+	log.Infof("SOCKS[%s] proxy listening at: %s", s.Name(), s.Address())
+	return nil
+}

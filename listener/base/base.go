@@ -1,19 +1,20 @@
-package listener
+package base
 
 import (
 	"net"
-	"net/netip"
 	"sync"
 
 	"github.com/lumavpn/luma/adapter"
+	"github.com/lumavpn/luma/log"
+	"github.com/lumavpn/luma/proxy/inbound"
 )
 
 type BaseListener struct {
 	listener   net.Listener
 	addr       string
 	closed     bool
+	listenAddr string
 	mu         sync.Mutex
-	listenAddr netip.Addr
 	tunnel     adapter.TransportHandler
 }
 
@@ -25,16 +26,12 @@ type BaseOptions struct {
 
 func New(opts BaseOptions) (*BaseListener, error) {
 	if opts.Addr == "" {
-		opts.Addr = "0.0.0.0"
-	}
-	addr, err := netip.ParseAddr(opts.Addr)
-	if err != nil {
-		return nil, err
+		opts.Addr = ":0"
 	}
 
 	baseListener := &BaseListener{
-		listenAddr: addr,
-		tunnel:     opts.Tunnel,
+		addr:   opts.Addr,
+		tunnel: opts.Tunnel,
 	}
 	return baseListener, nil
 }
@@ -43,8 +40,24 @@ func (b *BaseListener) Accept() (net.Conn, error) {
 	return b.listener.Accept()
 }
 
+func (b *BaseListener) ListenTCP() error {
+	l, err := inbound.Listen("tcp", b.addr)
+	if err != nil {
+		return err
+	}
+	log.Debugf("Inbound listen %s", l.Addr().String())
+	b.mu.Lock()
+	b.listener = l
+	b.listenAddr = l.Addr().String()
+	b.mu.Unlock()
+	return nil
+}
+
 // Address implements constant.InboundListener
 func (b *BaseListener) Address() string {
+	if b.listenAddr != "" {
+		return b.listenAddr
+	}
 	return b.addr
 }
 
