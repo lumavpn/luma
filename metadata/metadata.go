@@ -8,6 +8,7 @@ import (
 
 	"github.com/lumavpn/luma/dns"
 	"github.com/lumavpn/luma/proxy/proto"
+	"github.com/lumavpn/luma/transport/socks5"
 )
 
 // Metadata contains metadata of transport protocol sessions.
@@ -47,6 +48,10 @@ func (m *Metadata) SourceAddress() string {
 	return net.JoinHostPort(m.SrcIP.String(), strconv.FormatUint(uint64(m.SrcPort), 10))
 }
 
+func (m *Metadata) SourceAddrPort() netip.AddrPort {
+	return netip.AddrPortFrom(m.SrcIP.Unmap(), m.SrcPort)
+}
+
 func (m *Metadata) FiveTuple() string {
 	return fmt.Sprintf("[%s] %s -> %s", m.Network.String(), m.Source.String(), m.Destination.String())
 }
@@ -62,6 +67,21 @@ func (m *Metadata) Pure() *Metadata {
 
 func (m *Metadata) Addr() net.Addr {
 	return &Addr{metadata: m}
+}
+
+func (m *Metadata) AddrType() int {
+	switch true {
+	case m.Host != "" || !m.DstIP.IsValid():
+		return socks5.AtypDomainName
+	case m.DstIP.Is4():
+		return socks5.AtypIPv4
+	default:
+		return socks5.AtypIPv6
+	}
+}
+
+func (m *Metadata) Resolved() bool {
+	return m.DstIP.IsValid()
 }
 
 func (m *Metadata) SetRemoteAddr(addr net.Addr) error {

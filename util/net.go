@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const KeepAliveInterval = 15 * time.Second
+const KeepAliveInterval = 30 * time.Second
 
 func CalculateInterfaceName(name string) (tunName string) {
 	if runtime.GOOS == "darwin" {
@@ -56,5 +56,12 @@ func TCPKeepAlive(c net.Conn) {
 	if tcp, ok := c.(*net.TCPConn); ok {
 		_ = tcp.SetKeepAlive(true)
 		_ = tcp.SetKeepAlivePeriod(KeepAliveInterval)
+	}
+}
+
+// SafeConnClose closes tcp connection safely
+func SafeConnClose(c net.Conn, err error) {
+	if c != nil && err != nil {
+		c.Close()
 	}
 }

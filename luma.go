@@ -12,6 +12,7 @@ import (
 	"github.com/lumavpn/luma/common/bufio"
 	"github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
+	"github.com/lumavpn/luma/component/iface"
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/dialer"
 	"github.com/lumavpn/luma/local"
@@ -59,13 +60,15 @@ func (lu *Luma) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	lu.startLocalServers(resp.locals, true)
+	go lu.startLocal(resp.locals, true)
 
 	return lu.startEngine(ctx)
 }
 
 func (lu *Luma) startEngine(ctx context.Context) error {
 	log.Debug("Starting new instance")
+	lu.flushDefaultInterface()
+
 	cfg := lu.config
 	tunMTU := cfg.MTU
 	if tunMTU == 0 {
@@ -77,13 +80,10 @@ func (lu *Luma) startEngine(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		dialer.DefaultInterfaceName.Store(iface.Name)
+		dialer.DefaultInterface.Store(iface.Name)
 		dialer.DefaultInterfaceIndex.Store(int32(iface.Index))
 		log.Infof("bind to interface: %s", cfg.Interface)
 	}
-
-	defaultProxy := proxy.NewDirect()
-	proxy.SetDialer(defaultProxy)
 
 	tunName := cfg.Device
 	if tunName == "" || !checkTunName(tunName) {
@@ -142,33 +142,6 @@ func (lu *Luma) startEngine(ctx context.Context) error {
 	lu.SetStack(stack)
 	log.Debug("Luma successfully started")
 	return nil
-}
-
-func (lu *Luma) startLocalServers(localServers map[string]local.LocalServer, dropOld bool) {
-	lu.mu.Lock()
-	defer lu.mu.Unlock()
-	for name, newServer := range localServers {
-		if oldServer, ok := lu.localServers[name]; ok {
-			if !oldServer.Config().Equal(newServer.Config()) {
-				_ = oldServer.Close()
-			} else {
-				continue
-			}
-		}
-		if err := newServer.Start(lu.tunnel); err != nil {
-			log.Errorf("Local server %s start err: %s", name, err.Error())
-			continue
-		}
-		lu.localServers[name] = newServer
-	}
-	if dropOld {
-		for name, oldServer := range lu.localServers {
-			if _, ok := localServers[name]; !ok {
-				_ = oldServer.Close()
-				delete(localServers, name)
-			}
-		}
-	}
 }
 
 func (lu *Luma) SetDnsAdds(dnsAdds []netip.AddrPort) {
@@ -274,8 +247,9 @@ func (lu *Luma) Stop() {
 	}
 }
 
-func (lu *Luma) FlushDefaultInterface() {
-	targetInterface := dialer.DefaultInterfaceName.Load()
+func (lu *Luma) flushDefaultInterface() {
+	log.Debug("Flushing default interface")
+	targetInterface := dialer.DefaultInterface.Load()
 	for _, destination := range []netip.Addr{netip.IPv4Unspecified(), netip.IPv6Unspecified(), netip.MustParseAddr("1.1.1.1")} {
 		autoDetectInterfaceName := "en0"
 		if autoDetectInterfaceName == lu.tunName {
@@ -284,11 +258,11 @@ func (lu *Luma) FlushDefaultInterface() {
 			log.Warnf("[TUN] Auto detect interface by %s get empty name.", destination.String())
 		} else {
 			targetInterface = autoDetectInterfaceName
-			if old := dialer.DefaultInterfaceName.Load(); old != targetInterface {
+			if old := dialer.DefaultInterface.Load(); old != targetInterface {
 				log.Warnf("[TUN] default interface changed by monitor, %s => %s", old, targetInterface)
 
-				dialer.DefaultInterfaceName.Store(targetInterface)
-				//iface.FlushCache()
+				dialer.DefaultInterface.Store(targetInterface)
+				iface.FlushCache()
 			}
 			return
 		}
