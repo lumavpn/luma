@@ -9,12 +9,14 @@ import (
 	"github.com/lumavpn/luma/dns"
 	"github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/metadata"
+	"github.com/lumavpn/luma/proxy/adapter"
+	"github.com/lumavpn/luma/proxy/loopback"
 	"github.com/lumavpn/luma/proxy/proto"
 )
 
 type Direct struct {
 	*Base
-	loopBack *Detector
+	loopBack *loopback.Detector
 }
 
 func NewDirect() *Direct {
@@ -26,11 +28,11 @@ func NewDirect() *Direct {
 			udp:    true,
 			prefer: dns.DualStack,
 		},
-		loopBack: NewDetector(),
+		loopBack: loopback.NewDetector(),
 	}
 }
 
-func (d *Direct) DialContext(ctx context.Context, metadata *metadata.Metadata, opts ...dialer.Option) (Conn, error) {
+func (d *Direct) DialContext(ctx context.Context, metadata *metadata.Metadata, opts ...dialer.Option) (adapter.Conn, error) {
 	if err := d.loopBack.CheckConn(metadata); err != nil {
 		return nil, err
 	}
@@ -44,7 +46,7 @@ func (d *Direct) DialContext(ctx context.Context, metadata *metadata.Metadata, o
 }
 
 func (d *Direct) ListenPacketContext(ctx context.Context, metadata *metadata.Metadata,
-	opts ...dialer.Option) (PacketConn, error) {
+	opts ...dialer.Option) (adapter.PacketConn, error) {
 	if err := d.loopBack.CheckPacketConn(metadata); err != nil {
 		return nil, err
 	}

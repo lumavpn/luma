@@ -8,23 +8,12 @@ import (
 	"github.com/lumavpn/luma/common/bufio"
 	"github.com/lumavpn/luma/conn"
 	"github.com/lumavpn/luma/conn/deadline"
+	"github.com/lumavpn/luma/proxy/adapter"
 )
 
-type Connection interface {
-	Chains() Chain
-	AppendToChains(adapter Proxy)
-	RemoteDestination() string
-}
-
-type Conn interface {
-	conn.ExtendedConn
-	Connection
-}
-
-type PacketConn interface {
-	conn.EnhancePacketConn
-	Connection
-}
+type Chain = adapter.Chain
+type Conn = adapter.Conn
+type PacketConn = adapter.PacketConn
 
 type packetConn struct {
 	conn.EnhancePacketConn
@@ -44,7 +33,7 @@ func (c *proxyConn) Chains() Chain {
 	return c.chain
 }
 
-func (c *proxyConn) AppendToChains(a Proxy) {
+func (c *proxyConn) AppendToChains(a adapter.ProxyAdapter) {
 	c.chain = append(c.chain, a.Name())
 }
 
@@ -52,7 +41,7 @@ func (c *proxyConn) RemoteDestination() string {
 	return c.actualRemoteDestination
 }
 
-func NewConn(c net.Conn, a Proxy) Conn {
+func NewConn(c net.Conn, a Proxy) adapter.Conn {
 	if _, ok := c.(syscall.Conn); !ok {
 		c = conn.NewDeadlineConn(c)
 	}
@@ -64,17 +53,15 @@ func (c *packetConn) RemoteDestination() string {
 	return c.actualRemoteDestination
 }
 
-// Chains implements C.Connection
 func (c *packetConn) Chains() Chain {
 	return c.chain
 }
 
-// AppendToChains implements C.Connection
-func (c *packetConn) AppendToChains(a Proxy) {
+func (c *packetConn) AppendToChains(a adapter.ProxyAdapter) {
 	c.chain = append(c.chain, a.Name())
 }
 
-func newPacketConn(pc net.PacketConn, a Proxy) PacketConn {
+func newPacketConn(pc net.PacketConn, a Proxy) adapter.PacketConn {
 	epc := conn.NewEnhancePacketConn(pc)
 	if _, ok := pc.(syscall.Conn); !ok {
 		epc = deadline.NewEnhancePacketConn(epc)

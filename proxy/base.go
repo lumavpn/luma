@@ -8,6 +8,7 @@ import (
 	"github.com/lumavpn/luma/dialer"
 	"github.com/lumavpn/luma/dns"
 	"github.com/lumavpn/luma/metadata"
+	"github.com/lumavpn/luma/proxy/adapter"
 	"github.com/lumavpn/luma/proxy/proto"
 )
 
@@ -82,7 +83,7 @@ func (b *Base) DialContext(context.Context, *metadata.Metadata, ...dialer.Option
 	return nil, errors.ErrUnsupported
 }
 
-func (b *Base) ListenPacketContext(context.Context, *metadata.Metadata, ...dialer.Option) (PacketConn, error) {
+func (b *Base) ListenPacketContext(context.Context, *metadata.Metadata, ...dialer.Option) (adapter.PacketConn, error) {
 	return nil, errors.ErrUnsupported
 }
 

@@ -5,14 +5,15 @@ import (
 	"sync"
 
 	C "github.com/lumavpn/luma/proxy"
+	"github.com/lumavpn/luma/proxy/adapter"
 
 	"github.com/puzpuzpuz/xsync/v3"
 )
 
 type NatTable interface {
-	Set(key string, e C.PacketConn, w C.WriteBackProxy)
+	Set(key string, e C.PacketConn, w adapter.WriteBackProxy)
 
-	Get(key string) (C.PacketConn, C.WriteBackProxy)
+	Get(key string) (C.PacketConn, adapter.WriteBackProxy)
 
 	GetOrCreateLock(key string) (*sync.Cond, bool)
 
@@ -40,12 +41,12 @@ type Table struct {
 
 type Entry struct {
 	PacketConn      C.PacketConn
-	WriteBackProxy  C.WriteBackProxy
+	WriteBackProxy  adapter.WriteBackProxy
 	LocalUDPConnMap *xsync.MapOf[string, *net.UDPConn]
 	LocalLockMap    *xsync.MapOf[string, *sync.Cond]
 }
 
-func (t *Table) Set(key string, e C.PacketConn, w C.WriteBackProxy) {
+func (t *Table) Set(key string, e C.PacketConn, w adapter.WriteBackProxy) {
 	t.mapping.Store(key, &Entry{
 		PacketConn:      e,
 		WriteBackProxy:  w,
@@ -54,7 +55,7 @@ func (t *Table) Set(key string, e C.PacketConn, w C.WriteBackProxy) {
 	})
 }
 
-func (t *Table) Get(key string) (C.PacketConn, C.WriteBackProxy) {
+func (t *Table) Get(key string) (C.PacketConn, adapter.WriteBackProxy) {
 	entry, exist := t.getEntry(key)
 	if !exist {
 		return nil, nil

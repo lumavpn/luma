@@ -5,7 +5,7 @@ import (
 
 	C "github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/common/atomic"
-	"github.com/lumavpn/luma/proxy"
+	"github.com/lumavpn/luma/proxy/adapter"
 )
 
 type writeBackProxy struct {
@@ -20,7 +20,7 @@ func (w *writeBackProxy) UpdateWriteBack(wb C.WriteBack) {
 	w.wb.Store(wb)
 }
 
-func NewWriteBackProxy(wb C.WriteBack) proxy.WriteBackProxy {
+func NewWriteBackProxy(wb C.WriteBack) adapter.WriteBackProxy {
 	w := &writeBackProxy{}
 	w.UpdateWriteBack(wb)
 	return w

@@ -10,6 +10,7 @@ import (
 
 	"github.com/lumavpn/luma/dialer"
 	M "github.com/lumavpn/luma/metadata"
+	"github.com/lumavpn/luma/proxy/adapter"
 	"github.com/lumavpn/luma/transport/socks5"
 )
 
@@ -32,12 +33,12 @@ func NewSocks5(opts *Socks5Option) (*Socks5, error) {
 	}, nil
 }
 
-func (ss *Socks5) DialContext(ctx context.Context, metadata *M.Metadata, opts ...dialer.Option) (c Conn, err error) {
+func (ss *Socks5) DialContext(ctx context.Context, metadata *M.Metadata, opts ...dialer.Option) (c adapter.Conn, err error) {
 	return ss.DialContextWithDialer(ctx, dialer.NewDialer(ss.Base.DialOptions(opts...)...), metadata)
 }
 
 // DialContextWithDialer implements C.ProxyAdapter
-func (ss *Socks5) DialContextWithDialer(ctx context.Context, dialer Dialer, metadata *M.Metadata) (_ Conn, err error) {
+func (ss *Socks5) DialContextWithDialer(ctx context.Context, dialer Dialer, metadata *M.Metadata) (_ adapter.Conn, err error) {
 	network := "tcp"
 	if ss.unix {
 		network = "unix"
@@ -59,7 +60,7 @@ func (ss *Socks5) DialContextWithDialer(ctx context.Context, dialer Dialer, meta
 	return NewConn(c, ss), nil
 }
 
-func (ss *Socks5) StreamContext(ctx context.Context, c net.Conn, metadata *M.Metadata) (_ Conn, err error) {
+func (ss *Socks5) StreamContext(ctx context.Context, c net.Conn, metadata *M.Metadata) (_ adapter.Conn, err error) {
 	var user *socks5.User
 	if ss.username != "" {
 		user = &socks5.User{
@@ -72,7 +73,7 @@ func (ss *Socks5) StreamContext(ctx context.Context, c net.Conn, metadata *M.Met
 	return
 }
 
-func (ss *Socks5) ListenPacketContext(ctx context.Context, metadata *M.Metadata, opts ...dialer.Option) (_ PacketConn, err error) {
+func (ss *Socks5) ListenPacketContext(ctx context.Context, metadata *M.Metadata, opts ...dialer.Option) (_ adapter.PacketConn, err error) {
 	var proxyDialer Dialer = dialer.NewDialer(ss.Base.DialOptions(opts...)...)
 	ctx, cancel := context.WithTimeout(context.Background(), tcpConnectTimeout)
 	defer cancel()

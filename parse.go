@@ -8,6 +8,7 @@ import (
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/adapter"
+	"github.com/lumavpn/luma/proxy/proto"
 )
 
 type configResult struct {
@@ -40,8 +41,9 @@ func (lu *Luma) parseConfig(cfg *config.Config) (*configResult, error) {
 // parseProxies returns a map of proxies that are present in the config
 func parseProxies(cfg *config.Config) (map[string]proxy.Proxy, error) {
 	proxies := make(map[string]proxy.Proxy)
+	proxies[proto.Proto_DIRECT.String()] = adapter.NewProxy(proxy.NewDirect())
 	for _, mapping := range cfg.Proxies {
-		proxy, err := adapter.ParseProxy(mapping)
+		proxy, err := proxy.ParseProxy(mapping)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing proxy %w", err)
 		}
