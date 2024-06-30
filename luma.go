@@ -45,6 +45,8 @@ type Luma struct {
 	tunnel  tunnel.Tunnel
 
 	mu sync.Mutex
+
+	socksServer *local.SocksServer
 }
 
 // New creates a new instance of Luma
@@ -64,6 +66,10 @@ func (lu *Luma) Start(ctx context.Context) error {
 		return err
 	}
 	go lu.startLocal(resp.locals, true)
+	if err := lu.localSocksServer(cfg); err != nil {
+		return err
+	}
+
 	if err := lu.updateDNS(cfg.DNS); err != nil {
 		return err
 	}
@@ -248,6 +254,9 @@ func (lu *Luma) Stop() {
 	}
 	if lu.stack != nil {
 		lu.stack.Stop()
+	}
+	if lu.socksServer != nil {
+		lu.socksServer.Stop()
 	}
 }
 

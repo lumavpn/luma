@@ -19,6 +19,7 @@ type BaseServer struct {
 }
 
 type BaseOption struct {
+	Addr         string `inbound:"addr"`
 	NameStr      string `inbound:"name"`
 	Listen       string `inbound:"listen,omitempty"`
 	Port         int    `inbound:"port,omitempty"`
@@ -26,20 +27,32 @@ type BaseOption struct {
 	SpecialProxy string `inbound:"proxy,omitempty"`
 }
 
-func NewBase(options *BaseOption) (*BaseServer, error) {
-	if options.Listen == "" {
-		options.Listen = "0.0.0.0"
+func NewBase(opts *BaseOption) (*BaseServer, error) {
+	var listenAddr netip.Addr
+	var err error
+	if opts.Addr != "" {
+		host, portStr, err := net.SplitHostPort(opts.Addr)
+		if err != nil {
+			return nil, err
+		}
+		port, _ := strconv.Atoi(portStr)
+		opts.Port = port
+		listenAddr, err = netip.ParseAddr(host)
+	} else if opts.Listen == "" {
+		opts.Listen = "0.0.0.0"
 	}
-	addr, err := netip.ParseAddr(options.Listen)
+	if opts.Listen != "" {
+		listenAddr, err = netip.ParseAddr(opts.Listen)
+	}
 	if err != nil {
 		return nil, err
 	}
 	return &BaseServer{
-		name:         options.Name(),
-		listenAddr:   addr,
-		specialRules: options.SpecialRules,
-		port:         options.Port,
-		config:       options,
+		name:         opts.Name(),
+		listenAddr:   listenAddr,
+		specialRules: opts.SpecialRules,
+		port:         opts.Port,
+		config:       opts,
 	}, nil
 }
 

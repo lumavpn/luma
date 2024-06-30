@@ -9,31 +9,33 @@ import (
 )
 
 type SocksOption struct {
-	BaseOption
-	UDP bool `inbound:"udp,omitempty"`
+	*BaseOption
+	Addr string `inbound:"addr,omitempty"`
+	Port int    `inbound:"port,omitempty"`
+	UDP  bool   `inbound:"udp,omitempty"`
 }
 
-type Socks struct {
+type SocksServer struct {
 	*BaseServer
-	config *SocksOption
-	udp    bool
-	stl    *socks.Listener
-	sul    *socks.UDPListener
+	udp bool
+	stl *socks.Listener
+	sul *socks.UDPListener
 }
 
-func NewSocks(options *SocksOption) (*Socks, error) {
-	base, err := NewBase(&options.BaseOption)
+func NewSocks(opts *SocksOption) (*SocksServer, error) {
+	base, err := NewBase(&BaseOption{
+		Addr: opts.Addr,
+	})
 	if err != nil {
 		return nil, err
 	}
-	return &Socks{
+	return &SocksServer{
 		BaseServer: base,
-		config:     options,
-		udp:        options.UDP,
+		udp:        opts.UDP,
 	}, nil
 }
 
-func (s *Socks) Close() error {
+func (s *SocksServer) Stop() error {
 	var err error
 	if s.stl != nil {
 		if tcpErr := s.stl.Close(); tcpErr != nil {
@@ -53,11 +55,11 @@ func (s *Socks) Close() error {
 	return err
 }
 
-func (s *Socks) Address() string {
+func (s *SocksServer) Address() string {
 	return s.stl.Address()
 }
 
-func (s *Socks) Start(tunnel adapter.TransportHandler) error {
+func (s *SocksServer) Start(tunnel adapter.TransportHandler) error {
 	var err error
 	if s.stl, err = socks.New(s.RawAddress(), tunnel, s.Additions()...); err != nil {
 		return err

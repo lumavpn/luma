@@ -1,6 +1,7 @@
 package luma
 
 import (
+	"fmt"
 	"net"
 	"net/netip"
 	"runtime"
@@ -41,4 +42,19 @@ func verifyIP6() bool {
 		}
 	}
 	return false
+}
+
+func portIsZero(addr string) bool {
+	_, port, err := net.SplitHostPort(addr)
+	if port == "0" || port == "" || err != nil {
+		return true
+	}
+	return false
+}
+
+func generateAddress(bindAll bool, port int) string {
+	if bindAll {
+		return fmt.Sprintf(":%d", port)
+	}
+	return fmt.Sprintf("127.0.0.1:%d", port)
 }

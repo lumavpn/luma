@@ -5,7 +5,7 @@ import "github.com/lumavpn/luma/adapter"
 type LocalServer interface {
 	Name() string
 	Start(tunnel adapter.TransportHandler) error
-	Close() error
+	Stop() error
 	Address() string
 	RawAddress() string
 	Config() LocalConfig

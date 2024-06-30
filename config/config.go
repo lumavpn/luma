@@ -17,6 +17,10 @@ import (
 type Config struct {
 	// General configuration
 	LogLevel log.LogLevel `yaml:"loglevel"`
+	BindAll  bool         `yaml:"bind-all" json:"bind_all"`
+
+	// Proxies
+	SocksPort int `yaml:"socks-port" json:"socks_port"`
 
 	IPv6 bool `yaml:"ipv6"`
 
