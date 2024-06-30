@@ -48,12 +48,12 @@ type Luma struct {
 }
 
 // New creates a new instance of Luma
-func New(cfg *config.Config) (*Luma, error) {
+func New(cfg *config.Config) *Luma {
 	return &Luma{
 		config:       cfg,
 		localServers: map[string]local.LocalServer{},
 		tunnel:       tunnel.New(),
-	}, nil
+	}
 }
 
 // Start starts the default engine running Luma. If there is any issue with the setup process, an error is returned

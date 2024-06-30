@@ -7,6 +7,7 @@ import (
 
 	"github.com/lumavpn/luma/common/bufio"
 	"github.com/lumavpn/luma/conn"
+	"github.com/lumavpn/luma/conn/deadline"
 )
 
 type Connection interface {
@@ -75,11 +76,10 @@ func (c *packetConn) AppendToChains(a Proxy) {
 
 func newPacketConn(pc net.PacketConn, a Proxy) PacketConn {
 	epc := conn.NewEnhancePacketConn(pc)
-	if _, ok := pc.(syscall.Conn); !ok { // exclusion system conn like *net.UDPConn
-		//epc = N.NewDeadlineEnhancePacketConn(epc) // most conn from outbound can't handle readDeadline correctly
+	if _, ok := pc.(syscall.Conn); !ok {
+		epc = deadline.NewEnhancePacketConn(epc)
 	}
-	return &packetConn{epc, []string{a.Name()}, a.Name(), "", /*util.NewUUIDV4().String()*/
-		parseRemoteDestination(a.Addr())}
+	return &packetConn{epc, []string{a.Name()}, a.Name(), "", parseRemoteDestination(a.Addr())}
 }
 
 func parseRemoteDestination(addr string) string {

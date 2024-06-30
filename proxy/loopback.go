@@ -1,17 +1,15 @@
 package proxy
 
 import (
-	"errors"
 	"fmt"
 	"net/netip"
 
+	"github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/component/iface"
 	M "github.com/lumavpn/luma/metadata"
 
 	"github.com/puzpuzpuz/xsync/v3"
 )
-
-var ErrReject = errors.New("reject loopback connection")
 
 type Detector struct {
 	connMap       *xsync.MapOf[netip.AddrPort, struct{}]
@@ -62,7 +60,7 @@ func (l *Detector) CheckConn(metadata *M.Metadata) error {
 		return nil
 	}
 	if _, ok := l.connMap.Load(connAddr); ok {
-		return fmt.Errorf("%w to: %s", ErrReject, metadata.DestinationAddress())
+		return fmt.Errorf("%w to: %s", common.ErrRejectLoopback, metadata.DestinationAddress())
 	}
 	return nil
 }
@@ -82,7 +80,7 @@ func (l *Detector) CheckPacketConn(metadata *M.Metadata) error {
 	}
 
 	if _, ok := l.packetConnMap.Load(connAddr.Port()); ok {
-		return fmt.Errorf("%w to: %s", ErrReject, metadata.DestinationAddress())
+		return fmt.Errorf("%w to: %s", common.ErrRejectLoopback, metadata.DestinationAddress())
 	}
 	return nil
 }

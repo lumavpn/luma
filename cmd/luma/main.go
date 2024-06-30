@@ -37,8 +37,8 @@ func main() {
 
 	cfg, err := config.Init(configFile)
 	checkErr(err)
-	lu, err := luma.New(cfg)
-	checkErr(err)
+	lu := luma.New(cfg)
+
 	err = lu.Start(ctx)
 	checkErr(err)
 
