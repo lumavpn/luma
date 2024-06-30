@@ -22,6 +22,13 @@ func ParseProxy(mapping map[string]any) (Proxy, error) {
 	switch proxyProtocol {
 	case proto.Proto_DIRECT:
 		return NewDirect(), nil
+	case proto.Proto_HTTP:
+		httpOption := &HttpOption{}
+		err = decoder.Decode(mapping, httpOption)
+		if err != nil {
+			break
+		}
+		p, err = NewHTTP(*httpOption)
 	case proto.Proto_SOCKS5:
 		socksOption := &Socks5Option{}
 		err = decoder.Decode(mapping, socksOption)
