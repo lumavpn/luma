@@ -88,14 +88,28 @@ func (t *tunnel) handleUDPConn(packet adapter.PacketAdapter) {
 			cond.Broadcast()
 		}()
 
-		proxy := t.resolveMetadata(m)
+		proxy, rule, err := t.resolveMetadata(m)
+		if err != nil {
+			log.Warnf("[UDP] Parse metadata failed: %s", err.Error())
+			return
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), defaultUDPTimeout)
 		defer cancel()
 		rawPc, err := retry(ctx, func(ctx context.Context) (P.PacketConn, error) {
 			return proxy.ListenPacketContext(ctx, m.Pure())
 		}, func(err error) {
-			if err != nil {
-				log.Error(err)
+			if rule == nil {
+				log.Warnf(
+					"[UDP] dial %s %s --> %s error: %s",
+					proxy.Name(),
+					m.SourceAddress(),
+					m.DestinationAddress(),
+					err.Error(),
+				)
+			} else {
+				log.Warnf("[UDP] dial %s (match %s/%s) %s --> %s error: %s", proxy.Name(), rule.Rule().String(), rule.Payload(),
+					m.SourceAddress(), m.DestinationAddress(), err.Error())
 			}
 		})
 		if err != nil {

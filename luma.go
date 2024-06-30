@@ -22,6 +22,7 @@ import (
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/inbound"
+	"github.com/lumavpn/luma/proxydialer"
 	"github.com/lumavpn/luma/stack"
 	"github.com/lumavpn/luma/stack/tun"
 	"github.com/lumavpn/luma/tunnel"
@@ -31,10 +32,11 @@ import (
 type Luma struct {
 	// config is the configuration this instance of Luma is using
 	config *config.Config
-	// proxies is a map of proxies that Luma is configured to proxy traffic through
-	proxies map[string]proxy.Proxy
 
 	localServers map[string]local.LocalServer
+	proxyDialer  proxydialer.ProxyDialer
+	// proxies is a map of proxies that Luma is configured to proxy traffic through
+	proxies map[string]proxy.Proxy
 
 	stack stack.Stack
 	// Tunnel
@@ -54,7 +56,6 @@ func New(cfg *config.Config) *Luma {
 	return &Luma{
 		config:       cfg,
 		localServers: map[string]local.LocalServer{},
-		tunnel:       tunnel.New(),
 	}
 }
 
@@ -65,6 +66,11 @@ func (lu *Luma) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	lu.mu.Lock()
+	lu.proxyDialer = proxydialer.New(resp.proxies, nil)
+	lu.tunnel = tunnel.New(lu.proxyDialer)
+	lu.mu.Unlock()
+
 	go lu.startLocal(resp.locals, true)
 	if err := lu.localSocksServer(cfg); err != nil {
 		return err

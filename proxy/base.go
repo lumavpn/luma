@@ -7,7 +7,7 @@ import (
 
 	"github.com/lumavpn/luma/dialer"
 	"github.com/lumavpn/luma/dns"
-	"github.com/lumavpn/luma/metadata"
+	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy/adapter"
 	"github.com/lumavpn/luma/proxy/proto"
 )
@@ -28,24 +28,6 @@ type Base struct {
 	prefer dns.DNSPrefer
 }
 
-/*type BaseOption struct {
-	Name     string `proxy:"name,omitempty" group:"name,omitempty"`
-	Addr     string `proxy:"addr,omitempty" group:"addr,omitempty"`
-	Proto    proto.Proto
-	UDP      bool   `proxy:"udp,omitempty" group:"udp,omitempty"`
-	Username string `proxy:"username,omitempty" group:"username,omitempty"`
-	Password string `proxy:"password,omitempty" group:"password,omitempty"`
-	XUDP     bool
-	TFO      bool `proxy:"tfo,omitempty" group:"tfo,omitempty"`
-	MPTCP    bool
-
-	Interface   string `proxy:"interface-name,omitempty" group:"interface-name,omitempty"`
-	RoutingMark int    `proxy:"routing-mark,omitempty" group:"routing-mark,omitempty"`
-	IPVersion   string `proxy:"ip-version,omitempty" group:"ip-version,omitempty"`
-
-	Prefer dns.DNSPrefer
-}*/
-
 type BasicOption struct {
 	Name        string `proxy:"name,omitempty" group:"name,omitempty"`
 	Addr        string `proxy:"addr,omitempty" group:"addr,omitempty"`
@@ -59,22 +41,6 @@ type BasicOption struct {
 	RoutingMark int    `proxy:"routing-mark,omitempty" group:"routing-mark,omitempty"`
 	IPVersion   string `proxy:"ip-version,omitempty" group:"ip-version,omitempty"`
 }
-
-/*func NewBase(opts *BaseOption) *Base {
-	return &Base{
-		name:     opts.Name,
-		addr:     opts.Addr,
-		username: opts.Username,
-		password: opts.Password,
-		udp:      opts.UDP,
-		xudp:     opts.XUDP,
-		tfo:      opts.TFO,
-		mpTcp:    opts.MPTCP,
-		iface:    opts.Interface,
-		rmark:    opts.RoutingMark,
-		prefer:   opts.Prefer,
-	}
-}*/
 
 // Addr returns the address of the proxy
 func (b *Base) Addr() string {
@@ -96,12 +62,16 @@ func (b *Base) SupportUDP() bool {
 	return b.udp
 }
 
-func (b *Base) DialContext(context.Context, *metadata.Metadata, ...dialer.Option) (net.Conn, error) {
+func (b *Base) DialContext(context.Context, *M.Metadata, ...dialer.Option) (net.Conn, error) {
 	return nil, errors.ErrUnsupported
 }
 
-func (b *Base) ListenPacketContext(context.Context, *metadata.Metadata, ...dialer.Option) (adapter.PacketConn, error) {
+func (b *Base) ListenPacketContext(context.Context, *M.Metadata, ...dialer.Option) (adapter.PacketConn, error) {
 	return nil, errors.ErrUnsupported
+}
+
+func (b *Base) Unwrap(metadata *M.Metadata, touch bool) adapter.ProxyAdapter {
+	return nil
 }
 
 // DialOptions return []dialer.Option from struct

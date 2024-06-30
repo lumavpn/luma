@@ -11,8 +11,6 @@ import (
 	"github.com/lumavpn/luma/conn"
 	"github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/log"
-	"github.com/lumavpn/luma/metadata"
-	"github.com/lumavpn/luma/proxy"
 	P "github.com/lumavpn/luma/proxy"
 )
 
@@ -61,7 +59,11 @@ func (t *tunnel) handleTCPConn(tcpConn adapter.TCPConn) {
 		}()
 	}
 
-	proxy := t.resolveMetadata(m)
+	proxy, rule, err := t.resolveMetadata(m)
+	if err != nil {
+		log.Warnf("[Metadata] parse failed: %s", err.Error())
+		return
+	}
 
 	dialMetadata := m
 	if len(m.Host) > 0 {
@@ -110,8 +112,17 @@ func (t *tunnel) handleTCPConn(tcpConn adapter.TCPConn) {
 		}
 		return
 	}, func(err error) {
-		if err != nil {
-			log.Error(err)
+		if rule == nil {
+			log.Warnf(
+				"[TCP] dial %s %s --> %s error: %s",
+				proxy.Name(),
+				m.SourceAddress(),
+				m.DestinationAddress(),
+				err.Error(),
+			)
+		} else {
+			log.Warnf("[TCP] dial %s (match %s/%s) %s --> %s error: %s", proxy.Name(), rule.Rule().String(),
+				rule.Payload(), m.SourceAddress(), m.DestinationAddress(), err.Error())
 		}
 	})
 	if err != nil {
@@ -129,8 +140,4 @@ func (t *tunnel) handleTCPConn(tcpConn adapter.TCPConn) {
 	defer peekMutex.Unlock()
 	_ = c.SetReadDeadline(time.Time{}) // reset
 	handleSocket(c, remoteConn)
-}
-
-func (t *tunnel) resolveMetadata(m *metadata.Metadata) proxy.Proxy {
-	return proxy.NewDirect()
 }

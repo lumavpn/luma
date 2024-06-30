@@ -10,4 +10,6 @@ enum Proto {
   SOCKS5 = 5;
   TUN = 6;
   DIRECT = 7;
+  REJECT = 8;
+  PASS = 9;
 }
