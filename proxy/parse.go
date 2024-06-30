@@ -4,12 +4,12 @@ import (
 	"fmt"
 
 	"github.com/lumavpn/luma/common/structure"
+	"github.com/lumavpn/luma/proxy/adapter"
 	"github.com/lumavpn/luma/proxy/proto"
 )
 
 func ParseProxy(mapping map[string]any) (Proxy, error) {
-	decoder := structure.NewDecoder(structure.Option{TagName: "proxy", WeaklyTypedInput: true,
-		KeyReplacer: structure.DefaultKeyReplacer})
+	decoder := structure.NewDecoder(structure.Option{TagName: "proxy", WeaklyTypedInput: true, KeyReplacer: structure.DefaultKeyReplacer})
 	proxyType, existType := mapping["type"].(string)
 	if !existType {
 		return nil, fmt.Errorf("missing type")
@@ -18,22 +18,22 @@ func ParseProxy(mapping map[string]any) (Proxy, error) {
 	if err != nil {
 		return nil, err
 	}
-	var p Proxy
+	var p adapter.ProxyAdapter
 	switch proxyProtocol {
 	case proto.Proto_DIRECT:
 		return NewDirect(), nil
 	case proto.Proto_SOCKS5:
-		socks5Option := &Socks5Option{}
-		err = decoder.Decode(mapping, socks5Option)
+		socksOption := &Socks5Option{}
+		err = decoder.Decode(mapping, socksOption)
 		if err != nil {
 			break
 		}
-		p, err = NewSocks5(socks5Option)
+		p, err = NewSocks5(socksOption)
 	default:
 		return nil, fmt.Errorf("Unsupported protocol: %s", proxyProtocol)
 	}
 	if err != nil {
 		return nil, err
 	}
-	return p, nil
+	return adapter.NewProxy(p), nil
 }

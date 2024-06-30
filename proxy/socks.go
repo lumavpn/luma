@@ -9,26 +9,39 @@ import (
 	"net/netip"
 
 	"github.com/lumavpn/luma/dialer"
+	"github.com/lumavpn/luma/dns"
 	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy/adapter"
+	"github.com/lumavpn/luma/proxy/proto"
 	"github.com/lumavpn/luma/transport/socks5"
 )
 
 type Socks5 struct {
 	*Base
-	option *Socks5Option
-	unix   bool
+	unix bool
 }
 
 type Socks5Option struct {
-	*BaseOption
+	BasicOption
 }
 
 // NewSocks5 creates a new Socks5-based proxy connector
 func NewSocks5(opts *Socks5Option) (*Socks5, error) {
 	addr := opts.Addr
 	return &Socks5{
-		Base: NewBase(opts.BaseOption),
+		Base: &Base{
+			name:     opts.Name,
+			addr:     addr,
+			proto:    proto.Proto_SOCKS5,
+			udp:      opts.UDP,
+			tfo:      opts.TFO,
+			mpTcp:    opts.MPTCP,
+			iface:    opts.Interface,
+			rmark:    opts.RoutingMark,
+			username: opts.Username,
+			password: opts.Password,
+			prefer:   dns.NewDNSPrefer(opts.IPVersion),
+		},
 		unix: len(addr) > 0 && addr[0] == '/',
 	}, nil
 }

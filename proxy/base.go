@@ -28,22 +28,39 @@ type Base struct {
 	prefer dns.DNSPrefer
 }
 
-type BaseOption struct {
-	Name        string
-	Addr        string
-	Proto       proto.Proto
-	UDP         bool
-	Username    string
-	Password    string
-	XUDP        bool
-	TFO         bool
-	MPTCP       bool
-	Interface   string
-	RoutingMark int
-	Prefer      dns.DNSPrefer
+/*type BaseOption struct {
+	Name     string `proxy:"name,omitempty" group:"name,omitempty"`
+	Addr     string `proxy:"addr,omitempty" group:"addr,omitempty"`
+	Proto    proto.Proto
+	UDP      bool   `proxy:"udp,omitempty" group:"udp,omitempty"`
+	Username string `proxy:"username,omitempty" group:"username,omitempty"`
+	Password string `proxy:"password,omitempty" group:"password,omitempty"`
+	XUDP     bool
+	TFO      bool `proxy:"tfo,omitempty" group:"tfo,omitempty"`
+	MPTCP    bool
+
+	Interface   string `proxy:"interface-name,omitempty" group:"interface-name,omitempty"`
+	RoutingMark int    `proxy:"routing-mark,omitempty" group:"routing-mark,omitempty"`
+	IPVersion   string `proxy:"ip-version,omitempty" group:"ip-version,omitempty"`
+
+	Prefer dns.DNSPrefer
+}*/
+
+type BasicOption struct {
+	Name        string `proxy:"name,omitempty" group:"name,omitempty"`
+	Addr        string `proxy:"addr,omitempty" group:"addr,omitempty"`
+	UDP         bool   `proxy:"udp,omitempty" group:"udp,omitempty"`
+	Username    string `proxy:"username,omitempty" group:"username,omitempty"`
+	Password    string `proxy:"password,omitempty" group:"password,omitempty"`
+	XUDP        bool   `proxy:"xudp,omitempty" group:"xudp,omitempty"`
+	TFO         bool   `proxy:"tfo,omitempty" group:"tfo,omitempty"`
+	MPTCP       bool   `proxy:"mptcp,omitempty" group:"mptcp,omitempty"`
+	Interface   string `proxy:"interface-name,omitempty" group:"interface-name,omitempty"`
+	RoutingMark int    `proxy:"routing-mark,omitempty" group:"routing-mark,omitempty"`
+	IPVersion   string `proxy:"ip-version,omitempty" group:"ip-version,omitempty"`
 }
 
-func NewBase(opts *BaseOption) *Base {
+/*func NewBase(opts *BaseOption) *Base {
 	return &Base{
 		name:     opts.Name,
 		addr:     opts.Addr,
@@ -57,7 +74,7 @@ func NewBase(opts *BaseOption) *Base {
 		rmark:    opts.RoutingMark,
 		prefer:   opts.Prefer,
 	}
-}
+}*/
 
 // Addr returns the address of the proxy
 func (b *Base) Addr() string {
