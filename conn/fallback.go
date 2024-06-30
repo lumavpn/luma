@@ -3,10 +3,10 @@ package conn
 import (
 	"net"
 
+	M "github.com/lumavpn/luma/common/metadata"
 	"github.com/lumavpn/luma/common/network"
 	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
-	M "github.com/lumavpn/luma/metadata"
 )
 
 type FallbackPacketConn struct {

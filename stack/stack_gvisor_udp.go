@@ -9,8 +9,8 @@ import (
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/common/bufio"
 	"github.com/lumavpn/luma/common/canceler"
+	M "github.com/lumavpn/luma/common/metadata"
 	"github.com/lumavpn/luma/metadata"
-	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy/inbound"
 
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"

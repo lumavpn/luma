@@ -8,11 +8,11 @@ import (
 	"syscall"
 
 	"github.com/lumavpn/luma/common/memory"
+	M "github.com/lumavpn/luma/common/metadata"
 	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
 	"github.com/lumavpn/luma/common/rw"
 	"github.com/lumavpn/luma/common/task"
-	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/util"
 )
 

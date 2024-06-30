@@ -6,7 +6,8 @@ import (
 	"net/netip"
 	"strconv"
 
-	"github.com/lumavpn/luma/dns"
+	"github.com/lumavpn/luma/common"
+	M "github.com/lumavpn/luma/common/metadata"
 	"github.com/lumavpn/luma/proxy/proto"
 	"github.com/lumavpn/luma/transport/socks5"
 )
@@ -32,12 +33,12 @@ type Metadata struct {
 	DstPort      uint16 `json:"destinationPort"`
 	Host         string
 
-	DNSMode dns.DNSMode `json:"dnsMode"`
+	DNSMode common.DNSMode `json:"dnsMode"`
 
 	RawSrcAddr  net.Addr `json:"-"`
 	RawDstAddr  net.Addr `json:"-"`
-	Source      Socksaddr
-	Destination Socksaddr
+	Source      M.Socksaddr
+	Destination M.Socksaddr
 }
 
 func (m *Metadata) DestinationAddress() string {
@@ -57,7 +58,7 @@ func (m *Metadata) FiveTuple() string {
 }
 
 func (m *Metadata) Pure() *Metadata {
-	if (m.DNSMode == dns.DNSMapping || m.DNSMode == dns.DNSHosts) && m.DstIP.IsValid() {
+	if (m.DNSMode == common.DNSMapping || m.DNSMode == common.DNSHosts) && m.DstIP.IsValid() {
 		copyM := *m
 		copyM.Host = ""
 		return &copyM

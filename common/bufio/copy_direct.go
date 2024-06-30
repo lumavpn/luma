@@ -5,9 +5,9 @@ import (
 	"io"
 	"syscall"
 
+	M "github.com/lumavpn/luma/common/metadata"
 	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
-	M "github.com/lumavpn/luma/metadata"
 )
 
 func copyDirect(source syscall.Conn, destination syscall.Conn, readCounters []N.CountFunc, writeCounters []N.CountFunc) (handed bool, n int64, err error) {

@@ -5,9 +5,9 @@ import (
 	"net"
 	"syscall"
 
+	M "github.com/lumavpn/luma/common/metadata"
 	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
-	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/util"
 )
 

@@ -10,14 +10,16 @@ import (
 
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/common/bufio"
+	M "github.com/lumavpn/luma/common/metadata"
 	"github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
 	"github.com/lumavpn/luma/component/iface"
+	"github.com/lumavpn/luma/component/trie"
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/dialer"
+	"github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/local"
 	"github.com/lumavpn/luma/log"
-	"github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/inbound"
 	"github.com/lumavpn/luma/stack"
@@ -38,6 +40,7 @@ type Luma struct {
 	// Tunnel
 	device  tun.Tun
 	dnsAdds []netip.AddrPort
+	hosts   *trie.DomainTrie[resolver.HostValue]
 	tunName string
 	tunnel  tunnel.Tunnel
 
@@ -79,6 +82,7 @@ func (lu *Luma) startEngine(ctx context.Context) error {
 	}
 
 	if cfg.Interface != "" {
+		log.Debugf("Setting default interface to %s", cfg.Interface)
 		iface, err := net.InterfaceByName(cfg.Interface)
 		if err != nil {
 			return err
@@ -110,8 +114,10 @@ func (lu *Luma) startEngine(ctx context.Context) error {
 		dnsAdds = append(dnsAdds, addrPort)
 	}
 	lu.SetDnsAdds(dnsAdds)
+	tunAddressPrefix := netip.MustParsePrefix("198.18.0.1/16")
+	tunAddressPrefix = netip.PrefixFrom(tunAddressPrefix.Addr(), 30)
 
-	device, err := tun.New(tun.Options{
+	tunOptions := tun.Options{
 		AutoRoute:                cfg.Tun.AutoRoute,
 		Name:                     cfg.Device,
 		MTU:                      tunMTU,
@@ -122,7 +128,15 @@ func (lu *Luma) startEngine(ctx context.Context) error {
 		Inet6Address:             cfg.Tun.Inet6Address,
 		Inet4RouteExcludeAddress: cfg.Tun.Inet4RouteExcludeAddress,
 		Inet6RouteExcludeAddress: cfg.Tun.Inet6RouteExcludeAddress,
-	})
+	}
+	if len(cfg.Tun.Inet4Address) == 0 {
+		tunOptions.Inet4Address = []netip.Prefix{tunAddressPrefix}
+	}
+	if !cfg.IPv6 || !verifyIP6() {
+		tunOptions.Inet6Address = nil
+	}
+
+	device, err := tun.New(tunOptions)
 	if err != nil {
 		return err
 	}
@@ -191,7 +205,7 @@ func (lu *Luma) NewPacketConnection(ctx context.Context, c adapter.UDPConn) erro
 	for {
 		var (
 			buff *pool.Buffer
-			dest metadata.Socksaddr
+			dest M.Socksaddr
 			err  error
 		)
 		if isReadWaiter {

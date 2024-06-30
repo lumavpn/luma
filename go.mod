@@ -20,12 +20,16 @@ require (
 	github.com/openacid/low v0.1.21 // indirect
 	github.com/puzpuzpuz/xsync/v3 v3.2.0 // indirect
 	github.com/sagernet/sing v0.4.1 // indirect
+	github.com/samber/lo v1.43.0 // indirect
 	github.com/zhangyunhao116/fastrand v0.5.0 // indirect
+	go.etcd.io/bbolt v1.3.10 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
+	golang.org/x/exp v0.0.0-20230725093048-515e97ebf090 // indirect
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.22.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect

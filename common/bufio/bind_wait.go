@@ -1,9 +1,9 @@
 package bufio
 
 import (
+	M "github.com/lumavpn/luma/common/metadata"
 	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
-	M "github.com/lumavpn/luma/metadata"
 )
 
 var _ N.ReadWaiter = (*BindPacketReadWaiter)(nil)

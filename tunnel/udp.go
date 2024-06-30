@@ -9,9 +9,11 @@ import (
 
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/conn"
+	"github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
+	P "github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/tunnel/nat"
 )
 
@@ -24,17 +26,30 @@ const (
 func (t *tunnel) handleUDPConn(packet adapter.PacketAdapter) {
 	m := packet.Metadata()
 	if !m.Valid() {
-		//packet.Drop()
+		packet.Drop()
 		log.Debugf("[Metadata] not valid: %#v", m)
 		return
 	}
 
 	var fAddr netip.Addr
+	if resolver.IsExistFakeIP(m.DstIP) {
+		fAddr = m.DstIP
+	}
 
 	if err := preHandleMetadata(m); err != nil {
-		//packet.Drop()
+		packet.Drop()
 		log.Debugf("[Metadata PreHandle] error: %s", err)
 		return
+	}
+
+	// local resolve UDP dns
+	if !m.Resolved() {
+		ip, err := resolver.ResolveIP(context.Background(), m.Host)
+		if err != nil {
+			return
+		}
+		log.Debugf("Resolved host %s to %v", m.Host, ip)
+		m.DstIP = ip
 	}
 
 	key := packet.LocalAddr().String()
@@ -76,16 +91,21 @@ func (t *tunnel) handleUDPConn(packet adapter.PacketAdapter) {
 		proxy := t.resolveMetadata(m)
 		ctx, cancel := context.WithTimeout(context.Background(), defaultUDPTimeout)
 		defer cancel()
-
-		pc, err := proxy.ListenPacketContext(ctx, m.Pure())
+		rawPc, err := retry(ctx, func(ctx context.Context) (P.PacketConn, error) {
+			return proxy.ListenPacketContext(ctx, m.Pure())
+		}, func(err error) {
+			if err != nil {
+				log.Error(err)
+			}
+		})
 		if err != nil {
 			return
 		}
 		oAddrPort := m.AddrPort()
 
 		writeBackProxy := nat.NewWriteBackProxy(packet)
-		natTable.Set(key, pc, writeBackProxy)
-		go t.handleUDPToLocal(writeBackProxy, pc, key, oAddrPort, fAddr)
+		natTable.Set(key, rawPc, writeBackProxy)
+		go t.handleUDPToLocal(writeBackProxy, rawPc, key, oAddrPort, fAddr)
 
 		handle()
 

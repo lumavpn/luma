@@ -7,8 +7,8 @@ import (
 	"sync"
 	"unsafe"
 
+	M "github.com/lumavpn/luma/common/metadata"
 	"github.com/lumavpn/luma/common/pool"
-	M "github.com/lumavpn/luma/metadata"
 
 	"golang.org/x/sys/unix"
 )

@@ -6,6 +6,7 @@ import (
 	"net/netip"
 
 	"github.com/lumavpn/luma/dialer"
+	"github.com/lumavpn/luma/dns"
 	"github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy/proto"
@@ -17,9 +18,13 @@ type Direct struct {
 }
 
 func NewDirect() *Direct {
+	proto := proto.Proto_DIRECT
 	return &Direct{
 		Base: &Base{
-			proto: proto.Proto_DIRECT,
+			name:   proto.String(),
+			proto:  proto,
+			udp:    true,
+			prefer: dns.DualStack,
 		},
 		loopBack: NewDetector(),
 	}

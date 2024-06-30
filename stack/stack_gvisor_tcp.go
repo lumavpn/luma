@@ -7,6 +7,7 @@ import (
 	"net"
 
 	"github.com/lumavpn/luma/adapter"
+	M "github.com/lumavpn/luma/common/metadata"
 	"github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy/inbound"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -55,8 +56,8 @@ func (t *gVisor) withTCPHandler(ctx context.Context, ipStack *stack.Stack) func(
 		go func() {
 			m := &metadata.Metadata{
 				Network:     metadata.TCP,
-				Source:      metadata.ParseSocksAddrFromNet(lAddr),
-				Destination: metadata.ParseSocksAddrFromNet(rAddr),
+				Source:      M.ParseSocksAddrFromNet(lAddr),
+				Destination: M.ParseSocksAddrFromNet(rAddr),
 			}
 			inbound.WithOptions(m, inbound.WithDstAddr(m.Destination), inbound.WithSrcAddr(m.Source),
 				inbound.WithLocalAddr(tcpConn.LocalAddr()))

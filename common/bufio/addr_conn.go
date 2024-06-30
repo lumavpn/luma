@@ -4,7 +4,7 @@ import (
 	"io"
 	"net"
 
-	M "github.com/lumavpn/luma/metadata"
+	M "github.com/lumavpn/luma/common/metadata"
 )
 
 type AddrConn struct {

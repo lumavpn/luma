@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/stack"
 	"gopkg.in/yaml.v3"
@@ -16,6 +17,8 @@ import (
 type Config struct {
 	// General configuration
 	LogLevel log.LogLevel `yaml:"loglevel"`
+
+	IPv6 bool `yaml:"ipv6"`
 
 	Device    string `yaml:"device"`
 	Interface string `yaml:"interface"`
@@ -29,11 +32,18 @@ type Config struct {
 }
 
 type DNSConfig struct {
-	Enable      bool           `yaml:"enable"`
-	PreferH3    bool           `yaml:"prefer-h3"`
-	Hosts       map[string]any `yaml:"hosts" json:"hosts"`
-	IPv6        bool           `yaml:"ipv6"`
-	IPv6Timeout uint           `yaml:"ipv6-timeout"`
+	Enable            bool           `yaml:"enable"`
+	Listen            string         `yaml:"listen"`
+	PreferH3          bool           `yaml:"prefer-h3"`
+	Hosts             map[string]any `yaml:"hosts" json:"hosts"`
+	IPv6              bool           `yaml:"ipv6"`
+	IPv6Timeout       uint           `yaml:"ipv6-timeout"`
+	DefaultNameserver []string       `yaml:"default-nameserver" json:"default-nameserver"`
+	EnhancedMode      common.DNSMode `yaml:"enhanced-mode" json:"enhanced-mode"`
+	NameServer        []string       `yaml:"nameserver" json:"nameserver"`
+	Fallback          []string       `yaml:"fallback" json:"fallback"`
+	UseHosts          bool           `yaml:"use-hosts" json:"use-hosts"`
+	UseSystemHosts    bool           `yaml:"use-system-hosts" json:"use-system-hosts"`
 }
 
 type TunConfig struct {

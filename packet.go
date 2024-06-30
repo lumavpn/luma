@@ -5,9 +5,9 @@ import (
 	"net"
 	"sync"
 
+	M "github.com/lumavpn/luma/common/metadata"
 	"github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
-	M "github.com/lumavpn/luma/metadata"
 )
 
 type packet struct {

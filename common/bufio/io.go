@@ -4,9 +4,9 @@ import (
 	"io"
 	"net"
 
+	M "github.com/lumavpn/luma/common/metadata"
 	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
-	M "github.com/lumavpn/luma/metadata"
 )
 
 // Deprecated: bad usage

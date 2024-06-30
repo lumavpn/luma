@@ -3,9 +3,9 @@ package bufio
 import (
 	"net"
 
+	M "github.com/lumavpn/luma/common/metadata"
 	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
-	M "github.com/lumavpn/luma/metadata"
 )
 
 var _ N.NetPacketConn = (*FallbackPacketConn)(nil)
