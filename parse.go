@@ -2,6 +2,7 @@ package luma
 
 import (
 	"fmt"
+	"net/netip"
 
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/local"
@@ -36,8 +37,41 @@ func (lu *Luma) parseConfig(cfg *config.Config) (map[string]proxy.Proxy, map[str
 		return nil, nil, err
 	}
 
+	cfg.Tun, err = lu.parseTun(cfg)
+	if err != nil {
+		log.Fatalf("unable to parse tun config: %v", err)
+	}
+
 	log.Debugf("Have %d local servers", len(localServers))
 	return proxies, localServers, nil
+}
+
+func (lu *Luma) parseTun(cfg *config.Config) (*config.Tun, error) {
+	rawTun := cfg.Tun
+	tunAddressPrefix := lu.tunnel.FakeIPRange()
+	if !tunAddressPrefix.IsValid() {
+		tunAddressPrefix = netip.MustParsePrefix("198.18.0.1/16")
+	}
+	tunAddressPrefix = netip.PrefixFrom(tunAddressPrefix.Addr(), 30)
+
+	if !cfg.IPv6 || !verifyIP6() {
+		rawTun.Inet6Address = nil
+	}
+
+	tc := &config.Tun{
+		Enable:                   rawTun.Enable,
+		Device:                   rawTun.Device,
+		Stack:                    rawTun.Stack,
+		DNSHijack:                rawTun.DNSHijack,
+		AutoRoute:                rawTun.AutoRoute,
+		Inet4Address:             []netip.Prefix{tunAddressPrefix},
+		Inet6Address:             rawTun.Inet6Address,
+		Inet4RouteAddress:        rawTun.Inet4RouteAddress,
+		Inet6RouteAddress:        rawTun.Inet6RouteAddress,
+		Inet4RouteExcludeAddress: rawTun.Inet4RouteExcludeAddress,
+		Inet6RouteExcludeAddress: rawTun.Inet6RouteExcludeAddress,
+	}
+	return tc, nil
 }
 
 // parseProxies returns a map of proxies that are present in the config

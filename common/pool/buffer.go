@@ -275,3 +275,65 @@ func (b *Buffer) WriteString(s string) (n int, err error) {
 	b.end += n
 	return
 }
+
+func (b *Buffer) ReadByte() (byte, error) {
+	if b.IsEmpty() {
+		return 0, io.EOF
+	}
+
+	nb := b.data[b.start]
+	b.start++
+	return nb, nil
+}
+
+func (b *Buffer) ReadBytes(n int) ([]byte, error) {
+	if b.end-b.start < n {
+		return nil, io.EOF
+	}
+
+	nb := b.data[b.start : b.start+n]
+	b.start += n
+	return nb, nil
+}
+
+func (b *Buffer) Read(data []byte) (n int, err error) {
+	if b.IsEmpty() {
+		return 0, io.EOF
+	}
+	n = copy(data, b.data[b.start:b.end])
+	b.start += n
+	return
+}
+
+func (b *Buffer) Cap() int {
+	return b.capacity
+}
+
+func (b *Buffer) RawCap() int {
+	return len(b.data)
+}
+
+func (b *Buffer) From(n int) []byte {
+	return b.data[b.start+n : b.end]
+}
+
+func (b *Buffer) To(n int) []byte {
+	return b.data[b.start : b.start+n]
+}
+
+func (b *Buffer) Range(start, end int) []byte {
+	return b.data[b.start+start : b.start+end]
+}
+
+func (b *Buffer) Index(start int) []byte {
+	return b.data[b.start+start : b.start+start]
+}
+
+func (b *Buffer) ToOwned() *Buffer {
+	n := NewSize(len(b.data))
+	copy(n.data[b.start:b.end], b.data[b.start:b.end])
+	n.start = b.start
+	n.end = b.end
+	n.capacity = b.capacity
+	return n
+}

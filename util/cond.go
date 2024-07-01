@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"io"
 	"net"
 
@@ -134,4 +135,23 @@ func MinBy[T any, C constraints.Ordered](arr []T, block func(it T) C) T {
 		}
 	}
 	return min
+}
+
+func Done(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
+}
+
+func FilterIsInstance[T any, N any](arr []T, block func(it T) (N, bool)) []N {
+	var retArr []N
+	for _, it := range arr {
+		if n, isN := block(it); isN {
+			retArr = append(retArr, n)
+		}
+	}
+	return retArr
 }

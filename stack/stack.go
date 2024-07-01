@@ -7,49 +7,44 @@ import (
 	"net"
 	"net/netip"
 
-	M "github.com/lumavpn/luma/common/metadata"
-	"github.com/lumavpn/luma/common/network"
-	"github.com/lumavpn/luma/stack/tun"
+	"github.com/lumavpn/luma/common/control"
 )
 
 type Stack interface {
 	Start(context.Context) error
-	Stop() error
+	Close() error
 }
 
-type Options struct {
-	Handler      Handler
-	Stack        StackType
-	Tun          tun.Tun
-	Device       tun.Device
-	Inet4Address []netip.Prefix
-	Inet6Address []netip.Prefix
-	UDPTimeout   int64
-	//TunOptions tun.Options
+type Config struct {
+	Context                context.Context
+	Stack                  StackType
+	Tun                    Tun
+	TunOptions             Options
+	EndpointIndependentNat bool
+	UDPTimeout             int64
+	Handler                Handler
+	ForwarderBindInterface bool
+	IncludeAllNetworks     bool
+	InterfaceFinder        control.InterfaceFinder
 }
 
-type TCPConnectionHandler interface {
-	NewConnection(ctx context.Context, conn net.Conn, metadata M.Metadata) error
-}
-
-type UDPConnectionHandler interface {
-	NewPacketConnection(ctx context.Context, conn network.PacketConn, metadata M.Metadata) error
-}
-
-type Handler interface {
-	TCPConnectionHandler
-	UDPConnectionHandler
-}
-
-// New creates a new instance of Stack with the given options
-func New(options *Options) (Stack, error) {
-	switch options.Stack {
+// NewStack creates a new instance of Stack with the given options
+func NewStack(cfg *Config) (Stack, error) {
+	switch cfg.Stack {
 	case TunGVisor:
-		return NewGVisor(options)
+		return NewGVisor(cfg)
+	case TunMixed:
+		if cfg.IncludeAllNetworks {
+			return nil, ErrIncludeAllNetworks
+		}
+		return NewMixed(cfg)
 	case TunSystem:
-		return NewSystem(options)
+		if cfg.IncludeAllNetworks {
+			return nil, ErrIncludeAllNetworks
+		}
+		return NewSystem(cfg)
 	default:
-		return nil, fmt.Errorf("unknown stack: %s", options.Stack)
+		return nil, fmt.Errorf("unknown stack: %s", cfg.Stack)
 	}
 }
 

@@ -33,7 +33,7 @@ type Config struct {
 	Proxies []map[string]any `yaml:"proxies"`
 
 	DNS *DNSConfig `yaml:"dns" json:"dns"`
-	Tun TunConfig  `yaml:"tun" json:"tun"`
+	Tun *Tun       `yaml:"tun" json:"tun"`
 }
 
 type DNSConfig struct {

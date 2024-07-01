@@ -36,5 +36,5 @@ require (
 	golang.org/x/tools v0.22.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173 // indirect
-	gvisor.dev/gvisor v0.0.0-20240626212439-cbf3dd0a9754 // indirect
+	gvisor.dev/gvisor v0.0.0-20240701220751-45d0d1e5fef7 // indirect
 )

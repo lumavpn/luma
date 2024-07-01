@@ -6,14 +6,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/netip"
 	"time"
 
+	"github.com/lumavpn/luma/common/bufio"
+	"github.com/lumavpn/luma/common/canceler"
+	M "github.com/lumavpn/luma/common/metadata"
 	"github.com/lumavpn/luma/log"
-	"github.com/lumavpn/luma/stack/tun"
-
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
@@ -21,43 +22,44 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/transport/icmp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
+	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-const (
-	defaultNIC           tcpip.NICID = 1
-	defaultWndSize                   = 0
-	maxConnAttempts                  = 2 << 10
-	tcpKeepaliveCount                = 9
-	tcpKeepaliveIdle                 = 60 * time.Second
-	tcpKeepaliveInterval             = 30 * time.Second
-)
+const defaultNIC tcpip.NICID = 1
 
 type gVisor struct {
-	broadcastAddr netip.Addr
+	ctx                    context.Context
+	config                 *Config
+	handler                Handler
+	endpointIndependentNat bool
+	tun                    GVisorTun
+	broadcastAddr          netip.Addr
+	udpTimeout             int64
+	stack                  *stack.Stack
+	endpoint               stack.LinkEndpoint
+}
 
-	handler    Handler
-	options    *Options
-	tun        tun.GVisorTun
-	udpTimeout int64
-	stack      *stack.Stack
-	endpoint   stack.LinkEndpoint
+type GVisorTun interface {
+	Tun
+	NewEndpoint() (stack.LinkEndpoint, error)
 }
 
 func NewGVisor(
-	options *Options,
+	cfg *Config,
 ) (Stack, error) {
-	gTun, isGTun := options.Tun.(tun.GVisorTun)
+	gTun, isGTun := cfg.Tun.(GVisorTun)
 	if !isGTun {
 		return nil, errors.New("gVisor stack is unsupported on current platform")
 	}
 	log.Debug("Creating new gVisor stack")
 	return &gVisor{
-		tun:           gTun,
-		endpoint:      options.Device,
-		udpTimeout:    options.UDPTimeout,
-		handler:       options.Handler,
-		broadcastAddr: BroadcastAddr(options.Inet4Address),
-		options:       options,
+		ctx:                    cfg.Context,
+		config:                 cfg,
+		endpointIndependentNat: cfg.EndpointIndependentNat,
+		udpTimeout:             cfg.UDPTimeout,
+		handler:                cfg.Handler,
+		broadcastAddr:          BroadcastAddr(cfg.TunOptions.Inet4Address),
+		tun:                    gTun,
 	}, nil
 }
 
@@ -73,15 +75,79 @@ func (t *gVisor) Start(ctx context.Context) error {
 		return err
 	}
 
-	tcpForwarder := tcp.NewForwarder(ipStack, 0, 1024, t.withTCPHandler(ctx, ipStack))
+	tcpForwarder := tcp.NewForwarder(ipStack, 0, 1024, func(r *tcp.ForwarderRequest) {
+		var wq waiter.Queue
+		handshakeCtx, cancel := context.WithCancel(context.Background())
+		go func() {
+			select {
+			case <-t.ctx.Done():
+				wq.Notify(wq.Events())
+			case <-handshakeCtx.Done():
+			}
+		}()
+		endpoint, err := r.CreateEndpoint(&wq)
+		cancel()
+		if err != nil {
+			r.Complete(true)
+			return
+		}
+		r.Complete(false)
+		endpoint.SocketOptions().SetKeepAlive(true)
+		keepAliveIdle := tcpip.KeepaliveIdleOption(15 * time.Second)
+		endpoint.SetSockOpt(&keepAliveIdle)
+		keepAliveInterval := tcpip.KeepaliveIntervalOption(15 * time.Second)
+		endpoint.SetSockOpt(&keepAliveInterval)
+		tcpConn := gonet.NewTCPConn(&wq, endpoint)
+		lAddr := tcpConn.RemoteAddr()
+		rAddr := tcpConn.LocalAddr()
+		if lAddr == nil || rAddr == nil {
+			tcpConn.Close()
+			return
+		}
+		go func() {
+			var metadata M.Metadata
+			metadata.Source = M.ParseSocksAddrFromNet(lAddr)
+			metadata.Destination = M.ParseSocksAddrFromNet(rAddr)
+			hErr := t.handler.NewConnection(t.ctx, &gTCPConn{tcpConn}, metadata)
+			if hErr != nil {
+				endpoint.Abort()
+			}
+		}()
+	})
 	ipStack.SetTransportProtocolHandler(tcp.ProtocolNumber, tcpForwarder.HandlePacket)
+	if !t.endpointIndependentNat {
+		udpForwarder := udp.NewForwarder(ipStack, func(request *udp.ForwarderRequest) {
+			var wq waiter.Queue
+			endpoint, err := request.CreateEndpoint(&wq)
+			if err != nil {
+				return
+			}
+			udpConn := gonet.NewUDPConn(&wq, endpoint)
+			lAddr := udpConn.RemoteAddr()
+			rAddr := udpConn.LocalAddr()
+			if lAddr == nil || rAddr == nil {
+				endpoint.Abort()
+				return
+			}
+			gConn := &gUDPConn{UDPConn: udpConn}
+			go func() {
+				var metadata M.Metadata
+				metadata.Source = M.ParseSocksAddrFromNet(lAddr)
+				metadata.Destination = M.ParseSocksAddrFromNet(rAddr)
+				ctx, conn := canceler.NewPacketConn(t.ctx, bufio.NewUnbindPacketConnWithAddr(gConn, metadata.Destination), time.Duration(t.udpTimeout)*time.Second)
+				hErr := t.handler.NewPacketConnection(ctx, conn, metadata)
+				if hErr != nil {
+					endpoint.Abort()
+				}
+			}()
+		})
+		ipStack.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
+	} else {
+		ipStack.SetTransportProtocolHandler(udp.ProtocolNumber, NewUDPForwarder(t.ctx, ipStack, t.handler, t.udpTimeout).HandlePacket)
+	}
 
-	udpForwarder := udp.NewForwarder(ipStack, t.withUDPHandler(ctx, ipStack))
-	ipStack.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
-
-	t.endpoint = linkEndpoint
 	t.stack = ipStack
-
+	t.endpoint = linkEndpoint
 	return nil
 }
 
@@ -126,40 +192,7 @@ func newGVisorStack(ep stack.LinkEndpoint) (*stack.Stack, error) {
 	return ipStack, nil
 }
 
-func setSocketOptions(s *stack.Stack, ep tcpip.Endpoint) tcpip.Error {
-	{ /* TCP keepalive options */
-		ep.SocketOptions().SetKeepAlive(true)
-
-		idle := tcpip.KeepaliveIdleOption(tcpKeepaliveIdle)
-		if err := ep.SetSockOpt(&idle); err != nil {
-			return err
-		}
-
-		interval := tcpip.KeepaliveIntervalOption(tcpKeepaliveInterval)
-		if err := ep.SetSockOpt(&interval); err != nil {
-			return err
-		}
-
-		if err := ep.SetSockOptInt(tcpip.KeepaliveCountOption, tcpKeepaliveCount); err != nil {
-			return err
-		}
-	}
-	{ /* TCP recv/send buffer size */
-		var ss tcpip.TCPSendBufferSizeRangeOption
-		if err := s.TransportProtocolOption(header.TCPProtocolNumber, &ss); err == nil {
-			ep.SocketOptions().SetSendBufferSize(int64(ss.Default), false)
-		}
-
-		var rs tcpip.TCPReceiveBufferSizeRangeOption
-		if err := s.TransportProtocolOption(header.TCPProtocolNumber, &rs); err == nil {
-			ep.SocketOptions().SetReceiveBufferSize(int64(rs.Default), false)
-		}
-	}
-	return nil
-}
-
-func (t *gVisor) Stop() error {
-	log.Debug("Closing gvisor stack..")
+func (t *gVisor) Close() error {
 	t.endpoint.Attach(nil)
 	t.stack.Close()
 	for _, endpoint := range t.stack.CleanupEndpoints() {
@@ -182,14 +215,4 @@ func AddrFromAddress(address tcpip.Address) netip.Addr {
 	} else {
 		return netip.AddrFrom4(address.As4())
 	}
-}
-
-func wrapStackError(err tcpip.Error) error {
-	switch err.(type) {
-	case *tcpip.ErrClosedForSend,
-		*tcpip.ErrClosedForReceive,
-		*tcpip.ErrAborted:
-		return net.ErrClosed
-	}
-	return errors.New(err.String())
 }

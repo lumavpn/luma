@@ -14,16 +14,6 @@ const (
 	TunSystem
 )
 
-var (
-	// StackTypeMapping is a mapping for the StackType enum
-	StackTypeMapping = map[string]StackType{
-		TunGVisor.String(): TunGVisor,
-		TunLWIP.String():   TunLWIP,
-		TunMixed.String():  TunMixed,
-		TunSystem.String(): TunSystem,
-	}
-)
-
 // UnmarshalYAML unserialize StackType with yaml
 func (e *StackType) UnmarshalYAML(unmarshal func(any) error) error {
 	var tp string
@@ -42,6 +32,16 @@ func (e *StackType) UnmarshalYAML(unmarshal func(any) error) error {
 func (e StackType) MarshalYAML() (any, error) {
 	return e.String(), nil
 }
+
+var (
+	// StackTypeMapping is a mapping for the StackType enum
+	StackTypeMapping = map[string]StackType{
+		TunGVisor.String(): TunGVisor,
+		TunLWIP.String():   TunLWIP,
+		TunMixed.String():  TunMixed,
+		TunSystem.String(): TunSystem,
+	}
+)
 
 func (st StackType) String() string {
 	switch st {

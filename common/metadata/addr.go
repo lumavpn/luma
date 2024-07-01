@@ -212,3 +212,8 @@ func ParseSocksaddrHostPortStr(host string, portStr string) Socksaddr {
 		}
 	}
 }
+
+func AddrFromIP(ip net.IP) netip.Addr {
+	addr, _ := netip.AddrFromSlice(ip)
+	return addr
+}

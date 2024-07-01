@@ -2,20 +2,20 @@
 
 package stack
 
-import "errors"
+import "github.com/lumavpn/luma/common/errors"
 
 const WithGVisor = false
 
 var ErrGVisorNotIncluded = errors.New(`gVisor is not included in this build, rebuild with -tags with_gvisor`)
 
 func NewGVisor(
-	opts *Options,
+	cfg *Config,
 ) (Stack, error) {
 	return nil, ErrGVisorNotIncluded
 }
 
 func NewMixed(
-	opts *Options,
+	cfg *Config,
 ) (Stack, error) {
 	return nil, ErrGVisorNotIncluded
 }

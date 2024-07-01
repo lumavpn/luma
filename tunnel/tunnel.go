@@ -24,7 +24,9 @@ type tunnel struct {
 
 type Tunnel interface {
 	adapter.TransportHandler
+	FakeIPRange() netip.Prefix
 	Mode() common.TunnelMode
+	SetFakeIPRange(netip.Prefix)
 	SetMode(m common.TunnelMode)
 	// SetStatus sets the current status of the Tunnel
 	SetStatus(s TunnelStatus)
@@ -93,6 +95,14 @@ func (t *tunnel) SetStatus(s TunnelStatus) {
 // Status returns the current status of the Tunnel
 func (t *tunnel) Status() TunnelStatus {
 	return t.status.Load()
+}
+
+func (t *tunnel) SetFakeIPRange(p netip.Prefix) {
+	t.fakeIPRange = p
+}
+
+func (t *tunnel) FakeIPRange() netip.Prefix {
+	return t.fakeIPRange
 }
 
 func (t *tunnel) process() {
