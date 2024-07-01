@@ -1,6 +1,6 @@
 //go:build !windows
 
-package conn
+package network
 
 import (
 	"net"

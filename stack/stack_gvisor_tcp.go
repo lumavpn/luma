@@ -5,11 +5,10 @@ package stack
 import (
 	"context"
 	"net"
+	"time"
 
-	"github.com/lumavpn/luma/adapter"
 	M "github.com/lumavpn/luma/common/metadata"
-	"github.com/lumavpn/luma/metadata"
-	"github.com/lumavpn/luma/proxy/inbound"
+	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
@@ -42,8 +41,11 @@ func (t *gVisor) withTCPHandler(ctx context.Context, ipStack *stack.Stack) func(
 			return
 		}
 		r.Complete(false)
-
-		err = setSocketOptions(ipStack, endpoint)
+		endpoint.SocketOptions().SetKeepAlive(true)
+		keepAliveIdle := tcpip.KeepaliveIdleOption(15 * time.Second)
+		endpoint.SetSockOpt(&keepAliveIdle)
+		keepAliveInterval := tcpip.KeepaliveIntervalOption(15 * time.Second)
+		endpoint.SetSockOpt(&keepAliveInterval)
 
 		tcpConn := gonet.NewTCPConn(&wq, endpoint)
 		lAddr := tcpConn.RemoteAddr()
@@ -54,15 +56,10 @@ func (t *gVisor) withTCPHandler(ctx context.Context, ipStack *stack.Stack) func(
 		}
 
 		go func() {
-			m := &metadata.Metadata{
-				Network:     metadata.TCP,
-				Source:      M.ParseSocksAddrFromNet(lAddr),
-				Destination: M.ParseSocksAddrFromNet(rAddr),
-			}
-			inbound.WithOptions(m, inbound.WithDstAddr(m.Destination), inbound.WithSrcAddr(m.Source),
-				inbound.WithLocalAddr(tcpConn.LocalAddr()))
-
-			hErr := t.handler.NewConnection(ctx, adapter.NewTCPConn(&gTCPConn{tcpConn}, m))
+			var m M.Metadata
+			m.Source = M.ParseSocksAddrFromNet(lAddr)
+			m.Destination = M.ParseSocksAddrFromNet(rAddr)
+			hErr := t.handler.NewConnection(ctx, &gTCPConn{tcpConn}, m)
 			if hErr != nil {
 				endpoint.Abort()
 			}

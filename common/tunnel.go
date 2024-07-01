@@ -13,12 +13,14 @@ var ModeMapping = map[string]TunnelMode{
 	Global.String(): Global,
 	Rule.String():   Rule,
 	Direct.String(): Direct,
+	Select.String(): Select,
 }
 
 const (
 	Global TunnelMode = iota
 	Rule
 	Direct
+	Select
 )
 
 // UnmarshalJSON unserialize Mode
@@ -65,6 +67,8 @@ func (m TunnelMode) String() string {
 		return "rule"
 	case Direct:
 		return "direct"
+	case Select:
+		return "select"
 	default:
 		return "Unknown"
 	}

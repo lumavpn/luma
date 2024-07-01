@@ -7,7 +7,8 @@ import (
 	"net"
 	"net/netip"
 
-	"github.com/lumavpn/luma/adapter"
+	M "github.com/lumavpn/luma/common/metadata"
+	"github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/stack/tun"
 )
 
@@ -28,11 +29,11 @@ type Options struct {
 }
 
 type TCPConnectionHandler interface {
-	NewConnection(ctx context.Context, conn adapter.TCPConn) error
+	NewConnection(ctx context.Context, conn net.Conn, metadata M.Metadata) error
 }
 
 type UDPConnectionHandler interface {
-	NewPacketConnection(ctx context.Context, conn adapter.UDPConn) error
+	NewPacketConnection(ctx context.Context, conn network.PacketConn, metadata M.Metadata) error
 }
 
 type Handler interface {

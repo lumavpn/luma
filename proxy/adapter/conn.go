@@ -1,6 +1,6 @@
 package adapter
 
-import "github.com/lumavpn/luma/conn"
+import "github.com/lumavpn/luma/common/network"
 
 type Connection interface {
 	Chains() Chain
@@ -9,11 +9,11 @@ type Connection interface {
 }
 
 type Conn interface {
-	conn.ExtendedConn
+	network.ExtendedConn
 	Connection
 }
 
 type PacketConn interface {
-	conn.EnhancePacketConn
+	network.EnhancePacketConn
 	Connection
 }

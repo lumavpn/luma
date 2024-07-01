@@ -18,7 +18,6 @@ import (
 
 type Socks5 struct {
 	*Base
-	unix bool
 }
 
 type Socks5Option struct {
@@ -42,24 +41,18 @@ func NewSocks5(opts *Socks5Option) (*Socks5, error) {
 			password: opts.Password,
 			prefer:   dns.NewDNSPrefer(opts.IPVersion),
 		},
-		unix: len(addr) > 0 && addr[0] == '/',
 	}, nil
 }
 
-func (ss *Socks5) DialContext(ctx context.Context, metadata *M.Metadata, opts ...dialer.Option) (c adapter.Conn, err error) {
+func (ss *Socks5) DialContext(ctx context.Context, metadata *M.Metadata, opts ...dialer.Option) (_ adapter.Conn, err error) {
 	return ss.DialContextWithDialer(ctx, dialer.NewDialer(ss.Base.DialOptions(opts...)...), metadata)
 }
 
 // DialContextWithDialer implements C.ProxyAdapter
 func (ss *Socks5) DialContextWithDialer(ctx context.Context, dialer Dialer, metadata *M.Metadata) (_ adapter.Conn, err error) {
-	network := "tcp"
-	if ss.unix {
-		network = "unix"
-	}
-
-	c, err := dialer.DialContext(ctx, network, ss.Addr())
+	c, err := dialer.DialContext(ctx, "tcp", ss.addr)
 	if err != nil {
-		return nil, fmt.Errorf("connect to %s: %w", ss.Addr(), err)
+		return nil, fmt.Errorf("connect to %s: %w", ss.addr, err)
 	}
 	setKeepAlive(c)
 	defer func(c net.Conn) {
@@ -91,9 +84,9 @@ func (ss *Socks5) ListenPacketContext(ctx context.Context, metadata *M.Metadata,
 	ctx, cancel := context.WithTimeout(context.Background(), tcpConnectTimeout)
 	defer cancel()
 
-	c, err := dialer.DialContext(ctx, "tcp", ss.Addr())
+	c, err := dialer.DialContext(ctx, "tcp", ss.addr)
 	if err != nil {
-		err = fmt.Errorf("connect to %s: %w", ss.Addr(), err)
+		err = fmt.Errorf("connect to %s: %w", ss.addr, err)
 		return
 	}
 

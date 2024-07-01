@@ -3,8 +3,8 @@ package loopback
 import (
 	"sync"
 
+	"github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/pool"
-	"github.com/lumavpn/luma/conn"
 	"github.com/lumavpn/luma/proxy/adapter"
 )
 
@@ -46,7 +46,7 @@ func (c *firstWriteCallBackConn) ReaderReplaceable() bool {
 	return true
 }
 
-var _ conn.ExtendedConn = (*firstWriteCallBackConn)(nil)
+var _ network.ExtendedConn = (*firstWriteCallBackConn)(nil)
 
 func NewFirstWriteCallBackConn(c adapter.Conn, callback func(error)) adapter.Conn {
 	return &firstWriteCallBackConn{

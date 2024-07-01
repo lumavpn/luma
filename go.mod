@@ -15,12 +15,14 @@ require (
 	github.com/database64128/tfo-go/v2 v2.2.1 // indirect
 	github.com/gofrs/uuid/v5 v5.2.0 // indirect
 	github.com/google/btree v1.1.2 // indirect
+	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/miekg/dns v1.1.61 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/openacid/low v0.1.21 // indirect
 	github.com/puzpuzpuz/xsync/v3 v3.2.0 // indirect
 	github.com/sagernet/sing v0.4.1 // indirect
 	github.com/samber/lo v1.43.0 // indirect
+	github.com/xtaci/smux v1.5.24 // indirect
 	github.com/zhangyunhao116/fastrand v0.5.0 // indirect
 	go.etcd.io/bbolt v1.3.10 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect

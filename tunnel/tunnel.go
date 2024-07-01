@@ -50,7 +50,10 @@ func (t *tunnel) HandleTCP(conn adapter.TCPConn) {
 }
 
 func (t *tunnel) HandleUDP(conn adapter.PacketAdapter) {
-	t.UDPIn() <- conn
+	select {
+	case t.udpQueue <- conn:
+	default:
+	}
 }
 
 // TCPIn return fan-in TCP queue.

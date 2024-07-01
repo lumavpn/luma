@@ -16,8 +16,9 @@ import (
 
 type Config struct {
 	// General configuration
-	LogLevel log.LogLevel `yaml:"loglevel"`
-	BindAll  bool         `yaml:"bind-all" json:"bind_all"`
+	LogLevel log.LogLevel      `yaml:"loglevel"`
+	BindAll  bool              `yaml:"bind-all" json:"bind_all"`
+	Mode     common.TunnelMode `yaml:"mode" json:"mode"`
 
 	// Proxies
 	SocksPort int `yaml:"socks-port" json:"socks_port"`

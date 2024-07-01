@@ -26,18 +26,29 @@ type ProxyDialer interface {
 	Match(m *metadata.Metadata) (proxy.Proxy, rule.Rule, error)
 	SelectProxy(*metadata.Metadata) (proxy.Proxy, error)
 	SelectProxyByName(string) (proxy.Proxy, error)
+	SetProxies(map[string]proxy.Proxy)
+	SetRules([]rule.Rule)
 	UpdateProxies(map[string]proxy.Proxy)
 	UpdateRules([]rule.Rule)
 }
 
-func New(proxies map[string]proxy.Proxy, rules []rule.Rule) ProxyDialer {
-	if rules == nil {
-		rules = []rule.Rule{}
-	}
+func New() ProxyDialer {
 	return &proxyDialer{
-		mu:    new(sync.RWMutex),
-		rules: rules,
+		mu:      new(sync.RWMutex),
+		proxies: make(map[string]proxy.Proxy),
 	}
+}
+
+func (pd *proxyDialer) SetProxies(proxies map[string]proxy.Proxy) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+	pd.proxies = proxies
+}
+
+func (pd *proxyDialer) SetRules(rules []rule.Rule) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+	pd.rules = rules
 }
 
 func (pd *proxyDialer) getRules(m *metadata.Metadata) []rule.Rule {
@@ -108,7 +119,7 @@ func (pd *proxyDialer) Match(m *metadata.Metadata) (proxy.Proxy, rule.Rule, erro
 }
 
 func (pd *proxyDialer) SelectProxy(m *metadata.Metadata) (proxy.Proxy, error) {
-	pd.mu.Lock()
+	pd.mu.RLock()
 	defer pd.mu.RUnlock()
 	proxiesMap := pd.proxies
 

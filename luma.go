@@ -8,20 +8,16 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/lumavpn/luma/adapter"
-	"github.com/lumavpn/luma/common/bufio"
-	M "github.com/lumavpn/luma/common/metadata"
-	"github.com/lumavpn/luma/common/network"
-	"github.com/lumavpn/luma/common/pool"
 	"github.com/lumavpn/luma/component/iface"
 	"github.com/lumavpn/luma/component/trie"
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/dialer"
 	"github.com/lumavpn/luma/dns/resolver"
+	"github.com/lumavpn/luma/listener/mux"
 	"github.com/lumavpn/luma/local"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/proxy"
-	"github.com/lumavpn/luma/proxy/inbound"
+	"github.com/lumavpn/luma/proxy/proto"
 	"github.com/lumavpn/luma/proxydialer"
 	"github.com/lumavpn/luma/stack"
 	"github.com/lumavpn/luma/stack/tun"
@@ -53,25 +49,32 @@ type Luma struct {
 
 // New creates a new instance of Luma
 func New(cfg *config.Config) *Luma {
+	proxyDialer := proxydialer.New()
 	return &Luma{
 		config:       cfg,
-		localServers: map[string]local.LocalServer{},
+		proxyDialer:  proxyDialer,
+		localServers: make(map[string]local.LocalServer),
+		proxies:      make(map[string]proxy.Proxy),
+		tunnel:       tunnel.New(proxyDialer),
 	}
 }
 
 // Start starts the default engine running Luma. If there is any issue with the setup process, an error is returned
 func (lu *Luma) Start(ctx context.Context) error {
 	cfg := lu.config
-	resp, err := lu.parseConfig(cfg)
+	proxies, localServers, err := lu.parseConfig(cfg)
 	if err != nil {
 		return err
 	}
 	lu.mu.Lock()
-	lu.proxyDialer = proxydialer.New(resp.proxies, nil)
-	lu.tunnel = tunnel.New(lu.proxyDialer)
+	lu.proxies = proxies
+	lu.localServers = localServers
 	lu.mu.Unlock()
+	lu.proxyDialer.SetProxies(proxies)
 
-	go lu.startLocal(resp.locals, true)
+	lu.tunnel.SetMode(cfg.Mode)
+
+	go lu.startLocal(localServers, true)
 	if err := lu.localSocksServer(cfg); err != nil {
 		return err
 	}
@@ -126,6 +129,16 @@ func (lu *Luma) startEngine(ctx context.Context) error {
 		dnsAdds = append(dnsAdds, addrPort)
 	}
 	lu.SetDnsAdds(dnsAdds)
+
+	h, err := mux.NewListenerHandler(mux.ListenerConfig{
+		Tunnel: lu.tunnel,
+		Proto:  proto.Proto_TUN,
+		//Additions: additions,
+	})
+	if err != nil {
+		return err
+	}
+
 	tunAddressPrefix := netip.MustParsePrefix("198.18.0.1/16")
 	tunAddressPrefix = netip.PrefixFrom(tunAddressPrefix.Addr(), 30)
 
@@ -156,7 +169,7 @@ func (lu *Luma) startEngine(ctx context.Context) error {
 
 	stack, err := stack.New(&stack.Options{
 		Tun:     device,
-		Handler: lu,
+		Handler: h,
 		Stack:   stack.TunGVisor,
 	})
 	if err != nil {
@@ -191,18 +204,28 @@ func (lu *Luma) SetStack(s stack.Stack) {
 	lu.mu.Unlock()
 }
 
-// NewConnection handles new TCP connections
-func (lu *Luma) NewConnection(ctx context.Context, c adapter.TCPConn) error {
-	log.Debugf("New TCP connection, metadata is %s", c.Metadata().FiveTuple())
-	lu.tunnel.HandleTCP(c)
+/* NewConnection handles new TCP connections
+func (lu *Luma) NewConnection(ctx context.Context, c net.Conn, m M.Metadata) error {
+	//log.Debugf("New TCP connection, metadata is %s", c.Metadata().FiveTuple())
+
+	if deadline.NeedAdditionalReadDeadline(c) {
+		c = conn.NewDeadlineConn(c) // conn from sing should check NeedAdditionalReadDeadline
+	}
+
+	cMetadata := &metadata.Metadata{
+		Network: metadata.TCP,
+	}
+	inbound.WithOptions(cMetadata, inbound.WithDstAddr(m.Destination), inbound.WithSrcAddr(m.Source), inbound.WithInAddr(c.LocalAddr()))
+
+	lu.tunnel.HandleTCP(adapter.NewTCPConn(c, cMetadata))
 	return nil
 }
 
 // NewConnection handles new UDP packets
-func (lu *Luma) NewPacketConnection(ctx context.Context, c adapter.UDPConn) error {
-	log.Debugf("New UDP connection, metadata is %s", c.Metadata().FiveTuple())
+func (lu *Luma) NewPacketConnection(ctx context.Context, conn network.PacketConn, m M.Metadata) error {
+	defer func() { _ = conn.Close() }()
+	//log.Debugf("New UDP connection, metadata is %s", c.Metadata().FiveTuple())
 	mutex := sync.Mutex{}
-	conn := c.Conn()
 	conn2 := bufio.NewNetPacketConn(conn)
 	defer func() {
 		mutex.Lock()
@@ -237,9 +260,6 @@ func (lu *Luma) NewPacketConnection(ctx context.Context, c adapter.UDPConn) erro
 			return err
 		}
 
-		m := c.Metadata()
-		inbound.WithOptions(m, inbound.WithDstAddr(dest))
-
 		cPacket := &packet{
 			conn:  &conn2,
 			mutex: &mutex,
@@ -247,10 +267,15 @@ func (lu *Luma) NewPacketConnection(ctx context.Context, c adapter.UDPConn) erro
 			lAddr: conn.LocalAddr(),
 			buff:  buff,
 		}
-		lu.tunnel.HandleUDP(adapter.NewPacketAdapter(cPacket, m))
+		cMetadata := &metadata.Metadata{
+			Network: metadata.UDP,
+		}
+
+		inbound.WithOptions(cMetadata, inbound.WithDstAddr(dest), inbound.WithSrcAddr(m.Source), inbound.WithInAddr(conn.LocalAddr()))
+		lu.tunnel.HandleUDP(adapter.NewPacketAdapter(cPacket, cMetadata))
 	}
 	return nil
-}
+}*/
 
 // Stop stops running the Luma engine
 func (lu *Luma) Stop() {

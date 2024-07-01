@@ -6,12 +6,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/common/bufio"
 	"github.com/lumavpn/luma/common/canceler"
 	M "github.com/lumavpn/luma/common/metadata"
-	"github.com/lumavpn/luma/metadata"
-	"github.com/lumavpn/luma/proxy/inbound"
 
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -37,18 +34,12 @@ func (t *gVisor) withUDPHandler(ctx context.Context, ipStack *stack.Stack) func(
 		gConn := &gUDPConn{UDPConn: udpConn}
 
 		go func() {
-			m := &metadata.Metadata{
-				Network:     metadata.UDP,
-				Source:      M.ParseSocksAddrFromNet(lAddr),
-				Destination: M.ParseSocksAddrFromNet(rAddr),
-			}
-			inbound.WithOptions(m, inbound.WithDstAddr(m.Destination), inbound.WithSrcAddr(m.Source),
-				inbound.WithLocalAddr(udpConn.LocalAddr()))
-
+			var m M.Metadata
+			m.Source = M.ParseSocksAddrFromNet(lAddr)
+			m.Destination = M.ParseSocksAddrFromNet(rAddr)
 			ctx, conn := canceler.NewPacketConn(ctx, bufio.NewUnbindPacketConnWithAddr(gConn, m.Destination),
 				time.Duration(t.udpTimeout)*time.Second)
-
-			hErr := t.handler.NewPacketConnection(ctx, adapter.NewUDPConn(conn, m))
+			hErr := t.handler.NewPacketConnection(ctx, conn, m)
 			if hErr != nil {
 				endpoint.Abort()
 			}

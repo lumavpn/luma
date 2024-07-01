@@ -52,7 +52,7 @@ func (ss *Listener) start(tunnel adapter.TransportHandler, options ...inbound.Op
 func handleSocks(c net.Conn, tunnel adapter.TransportHandler, options ...inbound.Option) {
 	util.TCPKeepAlive(c)
 
-	bufConn := conn.NewBufConn(c)
+	bufConn := conn.NewBuffConn(c)
 	head, err := bufConn.Peek(1)
 	if err != nil {
 		c.Close()

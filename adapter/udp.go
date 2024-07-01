@@ -1,18 +1,19 @@
 package adapter
 
 import (
+	"net"
+
 	"github.com/gofrs/uuid/v5"
-	"github.com/lumavpn/luma/conn"
 	"github.com/lumavpn/luma/metadata"
 )
 
 // UDPConn implements the ConnContext, net.Conn, and net.PacketConn interfaces.
 type UDPConn interface {
 	ConnContext
-	Conn() conn.PacketConn
+	Conn() net.PacketConn
 }
 
-func NewUDPConn(conn conn.PacketConn, m *metadata.Metadata) UDPConn {
+func NewUDPConn(conn net.PacketConn, m *metadata.Metadata) UDPConn {
 	id, _ := uuid.NewV4()
 	return &udpConn{
 		conn: conn,
@@ -22,7 +23,7 @@ func NewUDPConn(conn conn.PacketConn, m *metadata.Metadata) UDPConn {
 }
 
 type udpConn struct {
-	conn conn.PacketConn
+	conn net.PacketConn
 	id   uuid.UUID
 	m    *metadata.Metadata
 }
@@ -31,7 +32,7 @@ func (c *udpConn) ID() uuid.UUID {
 	return c.id
 }
 
-func (c *udpConn) Conn() conn.PacketConn {
+func (c *udpConn) Conn() net.PacketConn {
 	return c.conn
 }
 

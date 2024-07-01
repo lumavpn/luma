@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"io"
 	"net"
 	"time"
@@ -69,6 +70,10 @@ type ExtendedConn interface {
 	net.Conn
 }
 
+type TCPConnectionHandler interface {
+	NewConnection(ctx context.Context, conn net.Conn, metadata M.Metadata) error
+}
+
 type NetPacketConn interface {
 	PacketConn
 	NetPacketReader
@@ -78,6 +83,14 @@ type NetPacketConn interface {
 type BindPacketConn interface {
 	NetPacketConn
 	net.Conn
+}
+
+type UDPHandler interface {
+	NewPacket(ctx context.Context, conn PacketConn, buffer *pool.Buffer, metadata M.Metadata) error
+}
+
+type UDPConnectionHandler interface {
+	NewPacketConnection(ctx context.Context, conn PacketConn, metadata M.Metadata) error
 }
 
 type CachedReader interface {

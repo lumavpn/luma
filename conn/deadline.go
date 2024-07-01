@@ -2,151 +2,18 @@ package conn
 
 import (
 	"net"
-	"os"
-	"time"
 
-	"github.com/lumavpn/luma/common/atomic"
 	"github.com/lumavpn/luma/common/bufio"
-	"github.com/lumavpn/luma/common/pool"
+	"github.com/lumavpn/luma/common/network"
+	"github.com/lumavpn/luma/common/network/deadline"
 )
 
-type connReadResult struct {
-	buffer []byte
-	err    error
-}
-
-type DeadlineConn struct {
-	ExtendedConn
-	deadline     atomic.TypedValue[time.Time]
-	pipeDeadline pipeDeadline
-	disablePipe  atomic.Bool
-	inRead       atomic.Bool
-	resultCh     chan *connReadResult
-}
-
-func IsConn(conn any) bool {
-	_, ok := conn.(*DeadlineConn)
-	return ok
-}
-
-func NewDeadlineConn(conn net.Conn) *DeadlineConn {
-	c := &DeadlineConn{
-		ExtendedConn: bufio.NewExtendedConn(conn),
-		pipeDeadline: makePipeDeadline(),
-		resultCh:     make(chan *connReadResult, 1),
+func NewDeadlineConn(conn net.Conn) network.ExtendedConn {
+	if deadline.IsPipe(conn) || deadline.IsPipe(network.UnwrapReader(conn)) {
+		return bufio.NewExtendedConn(conn) // was a *deadline.Conn
 	}
-	c.resultCh <- nil
-	return c
-}
-
-func (c *DeadlineConn) Read(p []byte) (n int, err error) {
-	select {
-	case result := <-c.resultCh:
-		if result != nil {
-			n = copy(p, result.buffer)
-			err = result.err
-			if n >= len(result.buffer) {
-				c.resultCh <- nil // finish cache read
-			} else {
-				result.buffer = result.buffer[n:]
-				c.resultCh <- result // push back for next call
-			}
-			return
-		} else {
-			c.resultCh <- nil
-			break
-		}
-	case <-c.pipeDeadline.wait():
-		return 0, os.ErrDeadlineExceeded
+	if deadline.IsConn(conn) || deadline.IsConn(network.UnwrapReader(conn)) {
+		return bufio.NewExtendedConn(conn) // was a *deadline.Conn
 	}
-
-	if c.disablePipe.Load() {
-		return c.ExtendedConn.Read(p)
-	} else if c.deadline.Load().IsZero() {
-		c.inRead.Store(true)
-		defer c.inRead.Store(false)
-		return c.ExtendedConn.Read(p)
-	}
-
-	<-c.resultCh
-	go c.pipeRead(len(p))
-
-	return c.Read(p)
-}
-
-func (c *DeadlineConn) pipeRead(size int) {
-	buffer := make([]byte, size)
-	n, err := c.ExtendedConn.Read(buffer)
-	buffer = buffer[:n]
-	c.resultCh <- &connReadResult{
-		buffer: buffer,
-		err:    err,
-	}
-}
-
-func (c *DeadlineConn) ReadBuffer(buffer *pool.Buffer) (err error) {
-	select {
-	case result := <-c.resultCh:
-		if result != nil {
-			n, _ := buffer.Write(result.buffer)
-			err = result.err
-
-			if n >= len(result.buffer) {
-				c.resultCh <- nil // finish cache read
-			} else {
-				result.buffer = result.buffer[n:]
-				c.resultCh <- result // push back for next call
-			}
-			return
-		} else {
-			c.resultCh <- nil
-			break
-		}
-	case <-c.pipeDeadline.wait():
-		return os.ErrDeadlineExceeded
-	}
-
-	if c.disablePipe.Load() {
-		return c.ExtendedConn.ReadBuffer(buffer)
-	} else if c.deadline.Load().IsZero() {
-		c.inRead.Store(true)
-		defer c.inRead.Store(false)
-		return c.ExtendedConn.ReadBuffer(buffer)
-	}
-
-	<-c.resultCh
-	go c.pipeRead(buffer.FreeLen())
-
-	return c.ReadBuffer(buffer)
-}
-
-func (c *DeadlineConn) SetReadDeadline(t time.Time) error {
-	if c.disablePipe.Load() {
-		return c.ExtendedConn.SetReadDeadline(t)
-	} else if c.inRead.Load() {
-		c.disablePipe.Store(true)
-		return c.ExtendedConn.SetReadDeadline(t)
-	}
-	c.deadline.Store(t)
-	c.pipeDeadline.set(t)
-	return nil
-}
-
-func (c *DeadlineConn) ReaderReplaceable() bool {
-	select {
-	case result := <-c.resultCh:
-		c.resultCh <- result
-		if result != nil {
-			return false // cache reading
-		} else {
-			break
-		}
-	default:
-		return false // pipe reading
-	}
-	return c.disablePipe.Load() || c.deadline.Load().IsZero()
-}
-
-func (c *DeadlineConn) Upstream() any {
-	return c.ExtendedConn
+	return deadline.NewConn(conn)
 }

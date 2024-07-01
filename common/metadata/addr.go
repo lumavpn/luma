@@ -173,3 +173,42 @@ func ParseAddrFromNet(netAddr net.Addr) netip.Addr {
 		return netip.Addr{}
 	}
 }
+
+func ParseSocksaddr(address string) Socksaddr {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return ParseSocksaddrHostPort(address, 0)
+	}
+	return ParseSocksaddrHostPortStr(host, port)
+}
+
+func ParseSocksaddrHostPort(host string, port uint16) Socksaddr {
+	netAddr, err := netip.ParseAddr(unwrapIPv6Address(host))
+	if err != nil {
+		return Socksaddr{
+			Fqdn: host,
+			Port: port,
+		}
+	} else {
+		return Socksaddr{
+			Addr: netAddr,
+			Port: port,
+		}
+	}
+}
+
+func ParseSocksaddrHostPortStr(host string, portStr string) Socksaddr {
+	port, _ := strconv.Atoi(portStr)
+	netAddr, err := netip.ParseAddr(unwrapIPv6Address(host))
+	if err != nil {
+		return Socksaddr{
+			Fqdn: host,
+			Port: uint16(port),
+		}
+	} else {
+		return Socksaddr{
+			Addr: netAddr,
+			Port: uint16(port),
+		}
+	}
+}

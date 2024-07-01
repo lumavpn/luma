@@ -1,60 +1,96 @@
-// Package bufconn provides a net.Conn implemented by a buffer
 package conn
 
 import (
 	"bufio"
 	"net"
+
+	bbufio "github.com/lumavpn/luma/common/bufio"
+	"github.com/lumavpn/luma/common/network"
+	"github.com/lumavpn/luma/common/pool"
 )
 
-// BufConn provides a net.Conn implemented by a buffer
-type BufConn struct {
+type BufferedConn struct {
 	r *bufio.Reader
-	net.Conn
+	network.ExtendedConn
 	peeked bool
 }
 
-func NewBufConn(c net.Conn) *BufConn {
-	if bc, ok := c.(*BufConn); ok {
+func NewBuffConn(c net.Conn) *BufferedConn {
+	if bc, ok := c.(*BufferedConn); ok {
 		return bc
 	}
-	return &BufConn{bufio.NewReader(c), c, false}
+	return &BufferedConn{bufio.NewReader(c), bbufio.NewExtendedConn(c), false}
 }
 
 // Reader returns the internal bufio.Reader
-func (c *BufConn) Reader() *bufio.Reader {
+func (c *BufferedConn) Reader() *bufio.Reader {
 	return c.r
 }
 
-func (c *BufConn) ResetPeeked() {
+func (c *BufferedConn) ResetPeeked() {
 	c.peeked = false
 }
 
-func (c *BufConn) Peeked() bool {
+func (c *BufferedConn) Peeked() bool {
 	return c.peeked
 }
 
 // Peek returns the next n bytes without advancing the reader
-func (c *BufConn) Peek(n int) ([]byte, error) {
+func (c *BufferedConn) Peek(n int) ([]byte, error) {
 	c.peeked = true
 	return c.r.Peek(n)
 }
 
-func (c *BufConn) Discard(n int) (discarded int, err error) {
+func (c *BufferedConn) Discard(n int) (discarded int, err error) {
 	return c.r.Discard(n)
 }
 
-func (c *BufConn) Read(p []byte) (int, error) {
+func (c *BufferedConn) Read(p []byte) (int, error) {
 	return c.r.Read(p)
 }
 
-func (c *BufConn) ReadByte() (byte, error) {
+func (c *BufferedConn) ReadByte() (byte, error) {
 	return c.r.ReadByte()
 }
 
-func (c *BufConn) UnreadByte() error {
+func (c *BufferedConn) UnreadByte() error {
 	return c.r.UnreadByte()
 }
 
-func (c *BufConn) Buffered() int {
+func (c *BufferedConn) Buffered() int {
 	return c.r.Buffered()
+}
+
+func (c *BufferedConn) ReadBuffer(buffer *pool.Buffer) (err error) {
+	if c.r != nil && c.r.Buffered() > 0 {
+		_, err = buffer.ReadOnceFrom(c.r)
+		return
+	}
+	return c.ExtendedConn.ReadBuffer(buffer)
+}
+
+func (c *BufferedConn) ReadCached() *pool.Buffer { // call in sing/common/bufio.Copy
+	if c.r != nil && c.r.Buffered() > 0 {
+		length := c.r.Buffered()
+		b, _ := c.r.Peek(length)
+		_, _ = c.r.Discard(length)
+		return pool.As(b)
+	}
+	c.r = nil // drop bufio.Reader to let gc can clean up its internal buf
+	return nil
+}
+
+func (c *BufferedConn) Upstream() any {
+	return c.ExtendedConn
+}
+
+func (c *BufferedConn) ReaderReplaceable() bool {
+	if c.r != nil && c.r.Buffered() > 0 {
+		return false
+	}
+	return true
+}
+
+func (c *BufferedConn) WriterReplaceable() bool {
+	return true
 }

@@ -3,6 +3,8 @@ package util
 import (
 	"io"
 	"net"
+
+	"golang.org/x/exp/constraints"
 )
 
 func DefaultValue[T any]() T {
@@ -98,4 +100,38 @@ func Close(closers ...any) error {
 		}
 	}
 	return retErr
+}
+
+func Must(errs ...error) {
+	for _, err := range errs {
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func Must1[T any](result T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+func MinBy[T any, C constraints.Ordered](arr []T, block func(it T) C) T {
+	var min T
+	var minValue C
+	if len(arr) == 0 {
+		return min
+	}
+	min = arr[0]
+	minValue = block(min)
+	for i := 1; i < len(arr); i++ {
+		item := arr[i]
+		value := block(item)
+		if value < minValue {
+			min = item
+			minValue = value
+		}
+	}
+	return min
 }

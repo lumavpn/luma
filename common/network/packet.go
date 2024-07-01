@@ -1,4 +1,4 @@
-package conn
+package network
 
 import (
 	"net"
@@ -16,6 +16,9 @@ type EnhancePacketConn interface {
 }
 
 func NewEnhancePacketConn(pc net.PacketConn) EnhancePacketConn {
+	if udpConn, isUDPConn := pc.(*net.UDPConn); isUDPConn {
+		return &enhanceUDPConn{UDPConn: udpConn}
+	}
 	if enhancePC, isEnhancePC := pc.(EnhancePacketConn); isEnhancePC {
 		return enhancePC
 	}
@@ -39,6 +42,18 @@ func (c *enhancePacketConn) WriterReplaceable() bool {
 }
 
 func (c *enhancePacketConn) ReaderReplaceable() bool {
+	return true
+}
+
+func (c *enhanceUDPConn) Upstream() any {
+	return c.UDPConn
+}
+
+func (c *enhanceUDPConn) WriterReplaceable() bool {
+	return true
+}
+
+func (c *enhanceUDPConn) ReaderReplaceable() bool {
 	return true
 }
 

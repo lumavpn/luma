@@ -2,11 +2,15 @@ package pool
 
 import (
 	"bytes"
+	"crypto/rand"
 	"io"
 	"log"
 	"net"
 	"sync"
 	"sync/atomic"
+
+	"github.com/lumavpn/luma/common/errors"
+	"github.com/lumavpn/luma/util"
 )
 
 const debugEnabled = false
@@ -112,6 +116,33 @@ func (b *Buffer) Resize(start, end int) {
 	b.end = b.start + end
 }
 
+func (b *Buffer) ReadFullFrom(r io.Reader, size int) (n int, err error) {
+	if b.end+size > b.capacity {
+		return 0, io.ErrShortBuffer
+	}
+	n, err = io.ReadFull(r, b.data[b.end:b.end+size])
+	b.end += n
+	return
+}
+
+func (b *Buffer) ReadFrom(reader io.Reader) (n int64, err error) {
+	for {
+		if b.IsFull() {
+			return 0, io.ErrShortBuffer
+		}
+		var readN int
+		readN, err = reader.Read(b.FreeBytes())
+		b.end += readN
+		n += int64(readN)
+		if err != nil {
+			if errors.IsMulti(err, io.EOF) {
+				err = nil
+			}
+			return
+		}
+	}
+}
+
 func (b *Buffer) ReadPacketFrom(r net.PacketConn) (int64, net.Addr, error) {
 	if b.IsFull() {
 		return 0, nil, io.ErrShortBuffer
@@ -177,4 +208,70 @@ func (b *Buffer) Leak() {
 	} else {
 		b.Release()
 	}
+}
+
+func (b *Buffer) ReadOnceFrom(r io.Reader) (int, error) {
+	if b.IsFull() {
+		return 0, io.ErrShortBuffer
+	}
+	n, err := r.Read(b.FreeBytes())
+	b.end += n
+	return n, err
+}
+
+func (b *Buffer) Advance(from int) {
+	b.start += from
+}
+
+func (b *Buffer) ExtendHeader(n int) []byte {
+	if b.start < n {
+		panic(util.ToString("buffer overflow: capacity ", b.capacity, ",start ", b.start, ", need ", n))
+	}
+	b.start -= n
+	return b.data[b.start : b.start+n]
+}
+
+func (b *Buffer) SetByte(index int, value byte) {
+	b.data[b.start+index] = value
+}
+
+func (b *Buffer) Extend(n int) []byte {
+	end := b.end + n
+	if end > b.capacity {
+		panic(util.ToString("buffer overflow: capacity ", b.capacity, ",end ", b.end, ", need ", n))
+	}
+	ext := b.data[b.end:end]
+	b.end = end
+	return ext
+}
+
+func (b *Buffer) WriteRandom(size int) []byte {
+	buffer := b.Extend(size)
+	util.Must1(io.ReadFull(rand.Reader, buffer))
+	return buffer
+}
+
+func (b *Buffer) WriteByte(d byte) error {
+	if b.IsFull() {
+		return io.ErrShortBuffer
+	}
+	b.data[b.end] = d
+	b.end++
+	return nil
+}
+
+func (b *Buffer) WriteRune(s rune) (int, error) {
+	return b.Write([]byte{byte(s)})
+}
+
+func (b *Buffer) WriteString(s string) (n int, err error) {
+	if len(s) == 0 {
+		return
+	}
+	if b.IsFull() {
+		return 0, io.ErrShortBuffer
+	}
+	n = copy(b.data[b.end:b.capacity], s)
+	b.end += n
+	return
 }

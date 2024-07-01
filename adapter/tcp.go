@@ -11,20 +11,20 @@ import (
 // TCPConn implements the ConnContext and net.Conn interfaces.
 type TCPConn interface {
 	ConnContext
-	Conn() *conn.BufConn
+	Conn() *conn.BufferedConn
 }
 
 func NewTCPConn(c net.Conn, m *metadata.Metadata) TCPConn {
 	id, _ := uuid.NewV4()
 	return &tcpConn{
-		conn: conn.NewBufConn(c),
+		conn: conn.NewBuffConn(c),
 		id:   id,
 		m:    m,
 	}
 }
 
 type tcpConn struct {
-	conn *conn.BufConn
+	conn *conn.BufferedConn
 	id   uuid.UUID
 	m    *metadata.Metadata
 }
@@ -33,7 +33,7 @@ func (c *tcpConn) ID() uuid.UUID {
 	return c.id
 }
 
-func (c *tcpConn) Conn() *conn.BufConn {
+func (c *tcpConn) Conn() *conn.BufferedConn {
 	return c.conn
 }
 

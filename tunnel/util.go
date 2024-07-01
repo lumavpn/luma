@@ -7,9 +7,9 @@ import (
 	"io"
 	"net"
 	"net/netip"
-	"time"
 
 	"github.com/lumavpn/luma/common"
+	"github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/component/slowdown"
 	"github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/metadata"
@@ -43,6 +43,8 @@ func (t *tunnel) resolveMetadata(m *metadata.Metadata) (proxy.Proxy, rule.Rule, 
 		proxy, err = t.proxyDialer.SelectProxyByName("DIRECT")
 	case common.Global:
 		proxy, err = t.proxyDialer.SelectProxyByName("GLOBAL")
+	case common.Select:
+		proxy, err = t.proxyDialer.SelectProxy(m)
 	default:
 		return t.proxyDialer.Match(m)
 	}
@@ -122,15 +124,5 @@ func retry[T any](ctx context.Context, ft func(context.Context) (T, error), fe f
 
 // handleSocket copies between left and right bidirectionally.
 func handleSocket(leftConn, rightConn net.Conn) {
-	ch := make(chan error)
-
-	go func() {
-		_, err := io.Copy(WriteOnlyWriter{Writer: leftConn}, ReadOnlyReader{Reader: rightConn})
-		leftConn.SetReadDeadline(time.Now())
-		ch <- err
-	}()
-
-	io.Copy(WriteOnlyWriter{Writer: rightConn}, ReadOnlyReader{Reader: leftConn})
-	rightConn.SetReadDeadline(time.Now())
-	<-ch
+	network.Relay(leftConn, rightConn)
 }

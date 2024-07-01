@@ -8,10 +8,10 @@ import (
 
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/common"
-	"github.com/lumavpn/luma/conn"
+	"github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/log"
-	P "github.com/lumavpn/luma/proxy"
+	proxyAdapter "github.com/lumavpn/luma/proxy/adapter"
 )
 
 const (
@@ -21,12 +21,12 @@ const (
 	defaultTCPTimeout = 5 * time.Second
 )
 
-func (t *tunnel) handleTCPConn(tcpConn adapter.TCPConn) {
+func (t *tunnel) handleTCPConn(c adapter.TCPConn) {
 	defer func(c net.Conn) {
 		_ = c.Close()
-	}(tcpConn.Conn())
+	}(c.Conn())
 
-	m := tcpConn.Metadata()
+	m := c.Metadata()
 	if !m.Valid() {
 		log.Debugf("[Metadata] not valid: %#v", m)
 		return
@@ -38,10 +38,9 @@ func (t *tunnel) handleTCPConn(tcpConn adapter.TCPConn) {
 		preHandleFailed = true
 	}
 
-	c := tcpConn.Conn()
-	c.ResetPeeked()
+	conn := c.Conn()
+	conn.ResetPeeked()
 
-	// If both trials have failed, we can do nothing but give up
 	if preHandleFailed {
 		log.Debugf("Metadata prehandle failed for connection %s --> %s",
 			m.SourceAddress(), m.DestinationAddress())
@@ -49,13 +48,13 @@ func (t *tunnel) handleTCPConn(tcpConn adapter.TCPConn) {
 	}
 
 	peekMutex := sync.Mutex{}
-	if !c.Peeked() {
+	if !conn.Peeked() {
 		peekMutex.Lock()
 		go func() {
 			defer peekMutex.Unlock()
-			_ = c.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
-			_, _ = c.Peek(1)
-			_ = c.SetReadDeadline(time.Time{})
+			_ = conn.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
+			_, _ = conn.Peek(1)
+			_ = conn.SetReadDeadline(time.Time{})
 		}()
 	}
 
@@ -81,13 +80,13 @@ func (t *tunnel) handleTCPConn(tcpConn adapter.TCPConn) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTCPTimeout)
 	defer cancel()
 
-	remoteConn, err := retry(ctx, func(ctx context.Context) (remoteConn P.Conn, err error) {
+	remoteConn, err := retry(ctx, func(ctx context.Context) (remoteConn proxyAdapter.Conn, err error) {
 		remoteConn, err = proxy.DialContext(ctx, dialMetadata)
 		if err != nil {
 			return
 		}
 
-		if conn.NeedHandshake(remoteConn) {
+		if network.NeedHandshake(remoteConn) {
 			defer func() {
 				for _, chain := range remoteConn.Chains() {
 					if chain == "REJECT" {
@@ -101,13 +100,13 @@ func (t *tunnel) handleTCPConn(tcpConn adapter.TCPConn) {
 			}()
 			peekMutex.Lock()
 			defer peekMutex.Unlock()
-			peekBytes, _ = c.Peek(c.Buffered())
+			peekBytes, _ = conn.Peek(conn.Buffered())
 			_, err = remoteConn.Write(peekBytes)
 			if err != nil {
 				return
 			}
 			if peekLen = len(peekBytes); peekLen > 0 {
-				_, _ = c.Discard(peekLen)
+				_, _ = conn.Discard(peekLen)
 			}
 		}
 		return
@@ -128,16 +127,11 @@ func (t *tunnel) handleTCPConn(tcpConn adapter.TCPConn) {
 	if err != nil {
 		return
 	}
-	defer func(remoteConn P.Conn) {
-		_ = remoteConn.Close()
-	}(remoteConn)
-
-	m.MidIP, m.MidPort = parseAddr(remoteConn.LocalAddr())
-
-	log.Infof("[TCP] %s <-> %s", m.SourceAddress(), m.DestinationAddress())
-	_ = c.SetReadDeadline(time.Now()) // stop unfinished peek
+	//log.Infof("[TCP] %s <-> %s", m.SourceAddress(), m.DestinationAddress())
+	_ = conn.SetReadDeadline(time.Now()) // stop unfinished peek
 	peekMutex.Lock()
 	defer peekMutex.Unlock()
-	_ = c.SetReadDeadline(time.Time{}) // reset
-	handleSocket(c, remoteConn)
+	_ = conn.SetReadDeadline(time.Time{}) // reset
+
+	handleSocket(conn, remoteConn)
 }

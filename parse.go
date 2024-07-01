@@ -16,26 +16,28 @@ type configResult struct {
 	proxies map[string]proxy.Proxy
 }
 
+func (lu *Luma) SetProxies(proxies map[string]proxy.Proxy) {
+	lu.mu.Lock()
+	defer lu.mu.Unlock()
+	lu.proxies = proxies
+}
+
 // parseConfig is used to parse the general configuration used by Luma
-func (lu *Luma) parseConfig(cfg *config.Config) (*configResult, error) {
+func (lu *Luma) parseConfig(cfg *config.Config) (map[string]proxy.Proxy, map[string]local.LocalServer, error) {
 	proxies, err := parseProxies(cfg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	log.Debugf("Have %d proxies", len(proxies))
 
 	localServers, err := parseLocal(cfg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	log.Debugf("Have %d local servers", len(localServers))
-
-	return &configResult{
-		proxies: proxies,
-		locals:  localServers,
-	}, nil
+	return proxies, localServers, nil
 }
 
 // parseProxies returns a map of proxies that are present in the config
@@ -52,6 +54,7 @@ func parseProxies(cfg *config.Config) (map[string]proxy.Proxy, error) {
 			return nil, fmt.Errorf("proxy %s is the duplicate name", proxy.Name())
 		}
 		log.Debugf("Adding proxy named %s", proxy.Name())
+		proxies[proxy.Name()] = proxy
 	}
 	return proxies, nil
 }
