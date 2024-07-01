@@ -1,16 +1,16 @@
-package proxy
+package outbound
 
 import (
 	"context"
 	"errors"
 	"net/netip"
 
+	"github.com/lumavpn/luma/component/loopback"
 	"github.com/lumavpn/luma/dialer"
 	"github.com/lumavpn/luma/dns"
 	"github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/metadata"
-	"github.com/lumavpn/luma/proxy/adapter"
-	"github.com/lumavpn/luma/proxy/loopback"
+	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/proto"
 )
 
@@ -32,7 +32,7 @@ func NewDirect() *Direct {
 	}
 }
 
-func (d *Direct) DialContext(ctx context.Context, metadata *metadata.Metadata, opts ...dialer.Option) (adapter.Conn, error) {
+func (d *Direct) DialContext(ctx context.Context, metadata *metadata.Metadata, opts ...dialer.Option) (proxy.Conn, error) {
 	if err := d.loopBack.CheckConn(metadata); err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (d *Direct) DialContext(ctx context.Context, metadata *metadata.Metadata, o
 }
 
 func (d *Direct) ListenPacketContext(ctx context.Context, metadata *metadata.Metadata,
-	opts ...dialer.Option) (adapter.PacketConn, error) {
+	opts ...dialer.Option) (proxy.PacketConn, error) {
 	if err := d.loopBack.CheckPacketConn(metadata); err != nil {
 		return nil, err
 	}

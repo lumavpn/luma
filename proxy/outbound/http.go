@@ -1,4 +1,4 @@
-package proxy
+package outbound
 
 import (
 	"bufio"
@@ -15,7 +15,7 @@ import (
 	"github.com/lumavpn/luma/dns"
 	"github.com/lumavpn/luma/log"
 	M "github.com/lumavpn/luma/metadata"
-	"github.com/lumavpn/luma/proxy/adapter"
+	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/proto"
 )
 
@@ -72,11 +72,11 @@ func (h *HTTP) StreamConnContext(ctx context.Context, c net.Conn, m *M.Metadata)
 	return c, nil
 }
 
-func (h *HTTP) DialContext(ctx context.Context, metadata *M.Metadata, opts ...dialer.Option) (_ adapter.Conn, err error) {
+func (h *HTTP) DialContext(ctx context.Context, metadata *M.Metadata, opts ...dialer.Option) (_ proxy.Conn, err error) {
 	return h.DialContextWithDialer(ctx, dialer.NewDialer(h.Base.DialOptions(opts...)...), metadata)
 }
 
-func (h *HTTP) DialContextWithDialer(ctx context.Context, dialer Dialer, metadata *M.Metadata) (_ adapter.Conn, err error) {
+func (h *HTTP) DialContextWithDialer(ctx context.Context, dialer proxy.Dialer, metadata *M.Metadata) (_ proxy.Conn, err error) {
 	c, err := dialer.DialContext(ctx, "tcp", h.addr)
 	if err != nil {
 		return nil, fmt.Errorf("%s connect error: %w", h.addr, err)

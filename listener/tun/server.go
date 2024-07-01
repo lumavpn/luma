@@ -15,6 +15,7 @@ import (
 	"github.com/lumavpn/luma/component/iface"
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/dialer"
+	"github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/listener/mux"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/proxy/inbound"
@@ -217,7 +218,7 @@ func New(options *config.Tun, tunnel adapter.TransportHandler, additions ...inbo
 
 	l.dnsServerIp = dnsServerIp
 	// after tun.New sing-tun has set DNS to TUN interface
-	//resolver.AddSystemDnsBlacklist(dnsServerIp...)
+	resolver.AddSystemDnsBlacklist(dnsServerIp...)
 
 	stackOptions := &stack.Config{
 		Context:                context.Background(),

@@ -10,6 +10,7 @@ import (
 
 	"github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/common/network"
+	"github.com/lumavpn/luma/component/loopback"
 	"github.com/lumavpn/luma/component/slowdown"
 	"github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/metadata"
@@ -93,7 +94,7 @@ func shouldStopRetry(err error) bool {
 	if errors.Is(err, resolver.ErrIPv6Disabled) {
 		return true
 	}
-	if errors.Is(err, common.ErrRejectLoopback) {
+	if errors.Is(err, loopback.ErrReject) {
 		return true
 	}
 	return false

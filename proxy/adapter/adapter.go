@@ -6,7 +6,7 @@ import (
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/dialer"
 	M "github.com/lumavpn/luma/metadata"
-	"github.com/lumavpn/luma/proxy/proto"
+	"github.com/lumavpn/luma/proxy"
 )
 
 type WriteBackProxy interface {
@@ -14,32 +14,16 @@ type WriteBackProxy interface {
 	UpdateWriteBack(wb adapter.WriteBack)
 }
 
-type ProxyAdapter interface {
-	// Name returns the name of this proxy
-	Name() string
-	// Addr is the address of the proxy
-	Addr() string
-	// Proto is the protocol of the proxy
-	Proto() proto.Proto
-	// SupportUDP returns whether or not the proxy supports UDP
-	SupportUDP() bool
-
-	DialContext(context.Context, *M.Metadata, ...dialer.Option) (Conn, error)
-	ListenPacketContext(context.Context, *M.Metadata, ...dialer.Option) (PacketConn, error)
-
-	Unwrap(metadata *M.Metadata, touch bool) ProxyAdapter
-}
-
 type Proxy struct {
-	ProxyAdapter
+	proxy.ProxyAdapter
 }
 
-func NewProxy(proxy ProxyAdapter) *Proxy {
+func NewProxy(proxy proxy.ProxyAdapter) *Proxy {
 	return &Proxy{proxy}
 }
 
 // DialContext implements C.ProxyAdapter
-func (p *Proxy) DialContext(ctx context.Context, metadata *M.Metadata, opts ...dialer.Option) (Conn, error) {
+func (p *Proxy) DialContext(ctx context.Context, metadata *M.Metadata, opts ...dialer.Option) (proxy.Conn, error) {
 	conn, err := p.ProxyAdapter.DialContext(ctx, metadata, opts...)
 	return conn, err
 }

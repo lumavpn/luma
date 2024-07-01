@@ -1,4 +1,4 @@
-package proxy
+package outbound
 
 import (
 	"context"
@@ -7,14 +7,17 @@ import (
 	"io"
 	"net"
 	"net/netip"
+	"time"
 
 	"github.com/lumavpn/luma/dialer"
 	"github.com/lumavpn/luma/dns"
 	M "github.com/lumavpn/luma/metadata"
-	"github.com/lumavpn/luma/proxy/adapter"
+	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/proto"
 	"github.com/lumavpn/luma/transport/socks5"
 )
+
+const tcpConnectTimeout = 5 * time.Second
 
 type Socks5 struct {
 	*Base
@@ -44,12 +47,12 @@ func NewSocks5(opts *Socks5Option) (*Socks5, error) {
 	}, nil
 }
 
-func (ss *Socks5) DialContext(ctx context.Context, metadata *M.Metadata, opts ...dialer.Option) (_ adapter.Conn, err error) {
+func (ss *Socks5) DialContext(ctx context.Context, metadata *M.Metadata, opts ...dialer.Option) (_ proxy.Conn, err error) {
 	return ss.DialContextWithDialer(ctx, dialer.NewDialer(ss.Base.DialOptions(opts...)...), metadata)
 }
 
 // DialContextWithDialer implements C.ProxyAdapter
-func (ss *Socks5) DialContextWithDialer(ctx context.Context, dialer Dialer, metadata *M.Metadata) (_ adapter.Conn, err error) {
+func (ss *Socks5) DialContextWithDialer(ctx context.Context, dialer proxy.Dialer, metadata *M.Metadata) (_ proxy.Conn, err error) {
 	c, err := dialer.DialContext(ctx, "tcp", ss.addr)
 	if err != nil {
 		return nil, fmt.Errorf("connect to %s: %w", ss.addr, err)
@@ -66,7 +69,7 @@ func (ss *Socks5) DialContextWithDialer(ctx context.Context, dialer Dialer, meta
 	return NewConn(c, ss), nil
 }
 
-func (ss *Socks5) StreamContext(ctx context.Context, c net.Conn, metadata *M.Metadata) (_ adapter.Conn, err error) {
+func (ss *Socks5) StreamContext(ctx context.Context, c net.Conn, metadata *M.Metadata) (_ proxy.Conn, err error) {
 	var user *socks5.User
 	if ss.username != "" {
 		user = &socks5.User{
@@ -79,8 +82,8 @@ func (ss *Socks5) StreamContext(ctx context.Context, c net.Conn, metadata *M.Met
 	return
 }
 
-func (ss *Socks5) ListenPacketContext(ctx context.Context, metadata *M.Metadata, opts ...dialer.Option) (_ adapter.PacketConn, err error) {
-	var proxyDialer Dialer = dialer.NewDialer(ss.Base.DialOptions(opts...)...)
+func (ss *Socks5) ListenPacketContext(ctx context.Context, metadata *M.Metadata, opts ...dialer.Option) (_ proxy.PacketConn, err error) {
+	var proxyDialer proxy.Dialer = dialer.NewDialer(ss.Base.DialOptions(opts...)...)
 	ctx, cancel := context.WithTimeout(context.Background(), tcpConnectTimeout)
 	defer cancel()
 

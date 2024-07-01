@@ -9,6 +9,7 @@ import (
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/adapter"
+	"github.com/lumavpn/luma/proxy/outbound"
 	"github.com/lumavpn/luma/proxy/proto"
 )
 
@@ -77,9 +78,9 @@ func (lu *Luma) parseTun(cfg *config.Config) (*config.Tun, error) {
 // parseProxies returns a map of proxies that are present in the config
 func parseProxies(cfg *config.Config) (map[string]proxy.Proxy, error) {
 	proxies := make(map[string]proxy.Proxy)
-	proxies[proto.Proto_DIRECT.String()] = adapter.NewProxy(proxy.NewDirect())
+	proxies[proto.Proto_DIRECT.String()] = adapter.NewProxy(outbound.NewDirect())
 	for _, mapping := range cfg.Proxies {
-		proxy, err := proxy.ParseProxy(mapping)
+		proxy, err := adapter.ParseProxy(mapping)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing proxy %w", err)
 		}

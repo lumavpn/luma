@@ -4,8 +4,10 @@ import (
 	"context"
 	"net"
 	"net/netip"
+	"runtime"
 	"sync"
 
+	"github.com/lumavpn/luma/component/iface"
 	"github.com/lumavpn/luma/component/trie"
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/dialer"
@@ -17,7 +19,6 @@ import (
 	"github.com/lumavpn/luma/proxydialer"
 	"github.com/lumavpn/luma/stack"
 	"github.com/lumavpn/luma/tunnel"
-	"github.com/lumavpn/luma/util"
 )
 
 type Luma struct {
@@ -69,10 +70,16 @@ func (lu *Luma) Start(ctx context.Context) error {
 	lu.mu.Unlock()
 	lu.proxyDialer.SetProxies(proxies)
 
-	lu.tunnel.SetMode(cfg.Mode)
-
 	go lu.startLocal(localServers, true)
 	if err := lu.localSocksServer(cfg); err != nil {
+		return err
+	}
+
+	if err := lu.updateGeneral(cfg); err != nil {
+		return err
+	}
+
+	if err := lu.startTunListener(ctx, cfg.Tun); err != nil {
 		return err
 	}
 
@@ -80,17 +87,19 @@ func (lu *Luma) Start(ctx context.Context) error {
 		return err
 	}
 
-	return lu.startEngine(ctx)
+	lu.tunnel.OnInnerLoading()
+
+	runtime.GC()
+	lu.tunnel.OnRunning()
+
+	log.Debug("Luma successfully started")
+	return nil
 }
 
-func (lu *Luma) startEngine(ctx context.Context) error {
-	log.Debug("Starting new instance")
-
-	cfg := lu.config
-	tunMTU := cfg.MTU
-	if tunMTU == 0 {
-		tunMTU = 9000
-	}
+func (lu *Luma) updateGeneral(cfg *config.Config) error {
+	lu.tunnel.SetMode(cfg.Mode)
+	resolver.DisableIPv6 = !cfg.IPv6
+	log.Debugf("Setting default interface to %s", cfg.Interface)
 
 	if cfg.Interface != "" {
 		log.Debugf("Setting default interface to %s", cfg.Interface)
@@ -102,19 +111,11 @@ func (lu *Luma) startEngine(ctx context.Context) error {
 		dialer.DefaultInterfaceIndex.Store(int32(iface.Index))
 		log.Infof("bind to interface: %s", cfg.Interface)
 	}
-
-	tunName := cfg.Device
-	if tunName == "" || !checkTunName(tunName) {
-		tunName = util.CalculateInterfaceName("Luma")
-		log.Debugf("Setting tun device name to %s", tunName)
-		cfg.Device = tunName
+	if cfg.Mark > 0 {
+		log.Infof("Use routing mark: %#x", cfg.Mark)
+		dialer.DefaultRoutingMark.Store(int32(cfg.Mark))
 	}
-
-	if err := lu.startTunListener(ctx, cfg.Tun); err != nil {
-		return err
-	}
-
-	log.Debug("Luma successfully started")
+	iface.FlushCache()
 	return nil
 }
 

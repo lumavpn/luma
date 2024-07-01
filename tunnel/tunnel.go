@@ -26,6 +26,8 @@ type Tunnel interface {
 	adapter.TransportHandler
 	FakeIPRange() netip.Prefix
 	Mode() common.TunnelMode
+	OnInnerLoading()
+	OnRunning()
 	SetFakeIPRange(netip.Prefix)
 	SetMode(m common.TunnelMode)
 	// SetStatus sets the current status of the Tunnel
@@ -79,6 +81,14 @@ func (t *tunnel) processUDP() {
 // Mode return current mode
 func (t *tunnel) Mode() common.TunnelMode {
 	return t.mode
+}
+
+func (t *tunnel) OnInnerLoading() {
+	t.status.Store(Inner)
+}
+
+func (t *tunnel) OnRunning() {
+	t.status.Store(Running)
 }
 
 // SetMode change the mode of tunnel

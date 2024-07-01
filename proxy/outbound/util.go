@@ -1,4 +1,4 @@
-package proxy
+package outbound
 
 import (
 	"bytes"

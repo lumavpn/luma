@@ -11,7 +11,7 @@ import (
 	"github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/log"
-	proxyAdapter "github.com/lumavpn/luma/proxy/adapter"
+	C "github.com/lumavpn/luma/proxy"
 )
 
 const (
@@ -80,7 +80,7 @@ func (t *tunnel) handleTCPConn(c adapter.TCPConn) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTCPTimeout)
 	defer cancel()
 
-	remoteConn, err := retry(ctx, func(ctx context.Context) (remoteConn proxyAdapter.Conn, err error) {
+	remoteConn, err := retry(ctx, func(ctx context.Context) (remoteConn C.Conn, err error) {
 		remoteConn, err = proxy.DialContext(ctx, dialMetadata)
 		if err != nil {
 			return

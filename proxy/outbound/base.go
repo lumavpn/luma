@@ -1,4 +1,4 @@
-package proxy
+package outbound
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"github.com/lumavpn/luma/dialer"
 	"github.com/lumavpn/luma/dns"
 	M "github.com/lumavpn/luma/metadata"
-	"github.com/lumavpn/luma/proxy/adapter"
+	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/proto"
 )
 
@@ -66,11 +66,11 @@ func (b *Base) DialContext(context.Context, *M.Metadata, ...dialer.Option) (net.
 	return nil, errors.ErrUnsupported
 }
 
-func (b *Base) ListenPacketContext(context.Context, *M.Metadata, ...dialer.Option) (adapter.PacketConn, error) {
+func (b *Base) ListenPacketContext(context.Context, *M.Metadata, ...dialer.Option) (proxy.PacketConn, error) {
 	return nil, errors.ErrUnsupported
 }
 
-func (b *Base) Unwrap(metadata *M.Metadata, touch bool) adapter.ProxyAdapter {
+func (b *Base) Unwrap(metadata *M.Metadata, touch bool) proxy.ProxyAdapter {
 	return nil
 }
 

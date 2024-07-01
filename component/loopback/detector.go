@@ -1,16 +1,19 @@
 package loopback
 
 import (
+	"errors"
 	"fmt"
 	"net/netip"
 
-	"github.com/lumavpn/luma/common"
+	"github.com/lumavpn/luma/common/callback"
 	"github.com/lumavpn/luma/component/iface"
 	M "github.com/lumavpn/luma/metadata"
-	"github.com/lumavpn/luma/proxy/adapter"
+	C "github.com/lumavpn/luma/proxy"
 
 	"github.com/puzpuzpuz/xsync/v3"
 )
+
+var ErrReject = errors.New("reject loopback connection")
 
 type Detector struct {
 	connMap       *xsync.MapOf[netip.AddrPort, struct{}]
@@ -24,7 +27,7 @@ func NewDetector() *Detector {
 	}
 }
 
-func (l *Detector) NewConn(conn adapter.Conn) adapter.Conn {
+func (l *Detector) NewConn(conn C.Conn) C.Conn {
 	metadata := M.Metadata{}
 	if metadata.SetRemoteAddr(conn.LocalAddr()) != nil {
 		return conn
@@ -34,12 +37,12 @@ func (l *Detector) NewConn(conn adapter.Conn) adapter.Conn {
 		return conn
 	}
 	l.connMap.Store(connAddr, struct{}{})
-	return NewCloseCallbackConn(conn, func() {
+	return callback.NewCloseCallbackConn(conn, func() {
 		l.connMap.Delete(connAddr)
 	})
 }
 
-func (l *Detector) NewPacketConn(conn adapter.PacketConn) adapter.PacketConn {
+func (l *Detector) NewPacketConn(conn C.PacketConn) C.PacketConn {
 	metadata := M.Metadata{}
 	if metadata.SetRemoteAddr(conn.LocalAddr()) != nil {
 		return conn
@@ -50,7 +53,7 @@ func (l *Detector) NewPacketConn(conn adapter.PacketConn) adapter.PacketConn {
 	}
 	port := connAddr.Port()
 	l.packetConnMap.Store(port, struct{}{})
-	return NewCloseCallbackPacketConn(conn, func() {
+	return callback.NewCloseCallbackPacketConn(conn, func() {
 		l.packetConnMap.Delete(port)
 	})
 }
@@ -61,7 +64,7 @@ func (l *Detector) CheckConn(metadata *M.Metadata) error {
 		return nil
 	}
 	if _, ok := l.connMap.Load(connAddr); ok {
-		return fmt.Errorf("%w to: %s", common.ErrRejectLoopback, metadata.DestinationAddress())
+		return fmt.Errorf("%w to: %s", ErrReject, metadata.DestinationAddress())
 	}
 	return nil
 }
@@ -81,7 +84,7 @@ func (l *Detector) CheckPacketConn(metadata *M.Metadata) error {
 	}
 
 	if _, ok := l.packetConnMap.Load(connAddr.Port()); ok {
-		return fmt.Errorf("%w to: %s", common.ErrRejectLoopback, metadata.DestinationAddress())
+		return fmt.Errorf("%w to: %s", ErrReject, metadata.DestinationAddress())
 	}
 	return nil
 }

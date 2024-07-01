@@ -1,14 +1,15 @@
-package proxy
+package adapter
 
 import (
 	"fmt"
 
 	"github.com/lumavpn/luma/common/structure"
-	"github.com/lumavpn/luma/proxy/adapter"
+	"github.com/lumavpn/luma/proxy"
+	"github.com/lumavpn/luma/proxy/outbound"
 	"github.com/lumavpn/luma/proxy/proto"
 )
 
-func ParseProxy(mapping map[string]any) (Proxy, error) {
+func ParseProxy(mapping map[string]any) (proxy.Proxy, error) {
 	decoder := structure.NewDecoder(structure.Option{TagName: "proxy", WeaklyTypedInput: true, KeyReplacer: structure.DefaultKeyReplacer})
 	proxyType, existType := mapping["type"].(string)
 	if !existType {
@@ -18,29 +19,29 @@ func ParseProxy(mapping map[string]any) (Proxy, error) {
 	if err != nil {
 		return nil, err
 	}
-	var p adapter.ProxyAdapter
+	var p proxy.ProxyAdapter
 	switch proxyProtocol {
 	case proto.Proto_DIRECT:
-		return NewDirect(), nil
+		return outbound.NewDirect(), nil
 	case proto.Proto_HTTP:
-		httpOption := &HttpOption{}
+		httpOption := &outbound.HttpOption{}
 		err = decoder.Decode(mapping, httpOption)
 		if err != nil {
 			break
 		}
-		p, err = NewHTTP(*httpOption)
+		p, err = outbound.NewHTTP(*httpOption)
 	case proto.Proto_SOCKS5:
-		socksOption := &Socks5Option{}
+		socksOption := &outbound.Socks5Option{}
 		err = decoder.Decode(mapping, socksOption)
 		if err != nil {
 			break
 		}
-		p, err = NewSocks5(socksOption)
+		p, err = outbound.NewSocks5(socksOption)
 	default:
 		return nil, fmt.Errorf("Unsupported protocol: %s", proxyProtocol)
 	}
 	if err != nil {
 		return nil, err
 	}
-	return adapter.NewProxy(p), nil
+	return NewProxy(p), nil
 }
