@@ -1,0 +1,73 @@
+package errors
+
+import (
+	"errors"
+	"strings"
+
+	"github.com/lumavpn/luma/util"
+)
+
+type multiError struct {
+	errors []error
+}
+
+func (e *multiError) Error() string {
+	return strings.Join(util.MapToString(e.errors), " | ")
+}
+
+func (e *multiError) Unwrap() []error {
+	return e.errors
+}
+
+func Errors(errors ...error) error {
+	errors = util.FilterNotNil(errors)
+	errors = ExpandAll(errors)
+	errors = util.FilterNotNil(errors)
+	errors = util.UniqBy(errors, error.Error)
+	switch len(errors) {
+	case 0:
+		return nil
+	case 1:
+		return errors[0]
+	}
+	return &multiError{
+		errors: errors,
+	}
+}
+
+func Expand(err error) []error {
+	if err == nil {
+		return nil
+	} else if multiErr, isMultiErr := err.(MultiError); isMultiErr {
+		return ExpandAll(util.FilterNotNil(multiErr.Unwrap()))
+	} else {
+		return []error{err}
+	}
+}
+
+func ExpandAll(errs []error) []error {
+	return util.FlatMap(errs, Expand)
+}
+
+func Append(err error, other error, block func(error) error) error {
+	if other == nil {
+		return err
+	}
+	return Errors(err, block(other))
+}
+
+func IsMulti(err error, targetList ...error) bool {
+	for _, target := range targetList {
+		if errors.Is(err, target) {
+			return true
+		}
+	}
+	err = Unwrap(err)
+	multiErr, isMulti := err.(MultiError)
+	if !isMulti {
+		return false
+	}
+	return util.All(multiErr.Unwrap(), func(it error) bool {
+		return IsMulti(it, targetList...)
+	})
+}
