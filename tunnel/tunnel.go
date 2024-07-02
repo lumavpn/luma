@@ -31,7 +31,7 @@ func New() Tunnel {
 	return t
 }
 
-func (t *tunnel) HandleTCP(conn adapter.TCPConn) {
+func (t *tunnel) HandleTCPConn(conn adapter.TCPConn) {
 	t.TCPIn() <- conn
 }
 
