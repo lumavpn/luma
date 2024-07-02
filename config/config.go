@@ -8,19 +8,51 @@ import (
 	"path/filepath"
 
 	"github.com/lumavpn/luma/log"
+	"github.com/lumavpn/luma/stack"
 	"gopkg.in/yaml.v3"
 )
 
+// Config is the Luma config manager
 type Config struct {
 	// General configuration
-	LogLevel log.LogLevel `yaml:"loglevel"`
+	General `yaml:",inline"`
+
+	*Tun `yaml:"tun"`
+}
+
+// General configuration
+type General struct {
+	Inbound  `yaml:",inline"`
+	LogLevel log.LogLevel `yaml:"log-level"`
+	IPv6     bool         `json:"ipv6" yaml:"ipv6"`
+}
+
+// Inbound configuration
+type Inbound struct {
+	SocksPort   int    `yaml:"socks-port"`
+	AllowLan    bool   `yaml:"allow-lan"`
+	BindAddress string `yaml:"bind-address"`
+}
+
+// Tun configuration
+type Tun struct {
+	Enable    bool            `yaml:"enable" json:"enable"`
+	Stack     stack.StackType `yaml:"stack" json:"stack"`
+	DNSHijack []string        `yaml:"dns-hijack" json:"dns-hijack"`
+	AutoRoute bool            `yaml:"auto-route" json:"auto-route"`
 }
 
 // New returns a new instance of Config with default values
 func New() *Config {
-	return &Config{
-		LogLevel: log.DebugLevel,
+	return new(Config)
+}
+
+// SetDefaultValues updates the given configuration to use default values
+func (c *Config) SetDefaultValues() {
+	if c.Tun == nil {
+		c.Tun = new(Tun)
 	}
+
 }
 
 // Init initializes a new Config from the given file and checks that it is valid

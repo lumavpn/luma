@@ -1,12 +1,13 @@
 syntax = "proto3";
 option go_package = "github.com/lumavpn/luma/proxy/proto";
 
-enum Protocol {
-  PROTOCOL_UNSET = 0;
-  HTTP = 1;
-  HTTPS = 2;
-  INNER = 3;
-  SOCKS4 = 4;
-  SOCKS5 = 5;
-  TUN = 6;
+enum Proto {
+  Unset = 0;
+  Direct = 1;
+  Reject = 2;
+  HTTP = 3;
+  Socks4 = 4;
+  Socks5 = 5;
+  Shadowsocks = 6;
+  Relay = 7;
 }

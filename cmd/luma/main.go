@@ -21,6 +21,8 @@ func checkErr(err error) {
 }
 
 func main() {
+	maxprocs.Set(maxprocs.Logger(func(string, ...any) {}))
+
 	var configFile string
 	var version bool
 	flag.StringVar(&configFile, "config", "config.yaml", "YAML format configuration file")
@@ -30,8 +32,6 @@ func main() {
 		log.Debug(v.String())
 		os.Exit(0)
 	}
-
-	_, _ = maxprocs.Set(maxprocs.Logger(func(string, ...any) {}))
 
 	ctx := context.Background()
 
