@@ -11,8 +11,8 @@ import (
 	"net"
 	"net/http"
 
+	C "github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/dialer"
-	"github.com/lumavpn/luma/dns"
 	"github.com/lumavpn/luma/log"
 	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
@@ -49,7 +49,7 @@ func NewHTTP(opts HttpOption) (*HTTP, error) {
 			rmark:    opts.RoutingMark,
 			username: opts.Username,
 			password: opts.Password,
-			prefer:   dns.NewDNSPrefer(opts.IPVersion),
+			prefer:   C.NewDNSPrefer(opts.IPVersion),
 		},
 		option:    opts,
 		tlsConfig: tlsConfig,

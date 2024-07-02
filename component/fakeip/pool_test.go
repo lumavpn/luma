@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/breakfreesoftware/luma/component/profile/cachefile"
-	"github.com/breakfreesoftware/luma/component/trie"
+	"github.com/lumavpn/luma/component/profile/cachefile"
+	"github.com/lumavpn/luma/component/trie"
 
 	"github.com/stretchr/testify/assert"
 	"go.etcd.io/bbolt"

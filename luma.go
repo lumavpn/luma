@@ -16,6 +16,7 @@ import (
 	"github.com/lumavpn/luma/local"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/proxy"
+	"github.com/lumavpn/luma/proxy/provider"
 	"github.com/lumavpn/luma/proxydialer"
 	"github.com/lumavpn/luma/stack"
 	"github.com/lumavpn/luma/tunnel"
@@ -29,6 +30,8 @@ type Luma struct {
 	proxyDialer  proxydialer.ProxyDialer
 	// proxies is a map of proxies that Luma is configured to proxy traffic through
 	proxies map[string]proxy.Proxy
+
+	ruleProviders map[string]provider.RuleProvider
 
 	stack stack.Stack
 	// Tunnel
@@ -49,11 +52,12 @@ type Luma struct {
 func New(cfg *config.Config) *Luma {
 	proxyDialer := proxydialer.New()
 	return &Luma{
-		config:       cfg,
-		proxyDialer:  proxyDialer,
-		localServers: make(map[string]local.LocalServer),
-		proxies:      make(map[string]proxy.Proxy),
-		tunnel:       tunnel.New(proxyDialer),
+		config:        cfg,
+		proxyDialer:   proxyDialer,
+		localServers:  make(map[string]local.LocalServer),
+		proxies:       make(map[string]proxy.Proxy),
+		ruleProviders: make(map[string]provider.RuleProvider),
+		tunnel:        tunnel.New(proxyDialer),
 	}
 }
 
@@ -83,7 +87,7 @@ func (lu *Luma) Start(ctx context.Context) error {
 		return err
 	}
 
-	if err := lu.updateDNS(cfg.DNS); err != nil {
+	if err := lu.updateDNS(cfg.DNS, lu.ruleProviders); err != nil {
 		return err
 	}
 

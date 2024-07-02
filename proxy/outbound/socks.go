@@ -9,8 +9,8 @@ import (
 	"net/netip"
 	"time"
 
+	C "github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/dialer"
-	"github.com/lumavpn/luma/dns"
 	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/proto"
@@ -42,7 +42,7 @@ func NewSocks5(opts *Socks5Option) (*Socks5, error) {
 			rmark:    opts.RoutingMark,
 			username: opts.Username,
 			password: opts.Password,
-			prefer:   dns.NewDNSPrefer(opts.IPVersion),
+			prefer:   C.NewDNSPrefer(opts.IPVersion),
 		},
 	}, nil
 }

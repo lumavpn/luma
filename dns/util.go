@@ -7,13 +7,21 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"strconv"
 	"strings"
 	"time"
 
+	N "github.com/lumavpn/luma/common/network"
+	"github.com/lumavpn/luma/common/nnip"
 	"github.com/lumavpn/luma/common/picker"
+	"github.com/lumavpn/luma/dialer"
 	"github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/log"
-	"github.com/lumavpn/luma/util"
+	M "github.com/lumavpn/luma/metadata"
+	"github.com/lumavpn/luma/proxy"
+	C "github.com/lumavpn/luma/proxy"
+	"github.com/lumavpn/luma/proxydialer"
+
 	D "github.com/miekg/dns"
 	"github.com/samber/lo"
 )
@@ -45,6 +53,7 @@ func updateTTL(records []D.RR, ttl uint32) {
 }
 
 func putMsgToCache(c dnsCache, key string, q D.Question, msg *D.Msg) {
+	// skip dns cache for acme challenge
 	if q.Qtype == D.TypeTXT && strings.HasPrefix(q.Name, "_acme-challenge.") {
 		log.Debugf("[DNS] dns cache ignored because of acme challenge for: %s", q.Name)
 		return
@@ -52,6 +61,8 @@ func putMsgToCache(c dnsCache, key string, q D.Question, msg *D.Msg) {
 
 	var ttl uint32
 	if msg.Rcode == D.RcodeServerFailure {
+		// [...] a resolver MAY cache a server failure response.
+		// If it does so it MUST NOT cache it for longer than five (5) minutes [...]
 		ttl = serverFailureCacheTTL
 	} else {
 		ttl = minimalTTL(append(append(msg.Answer, msg.Ns...), msg.Extra...))
@@ -86,38 +97,31 @@ func isIPRequest(q D.Question) bool {
 	return q.Qclass == D.ClassINET && (q.Qtype == D.TypeA || q.Qtype == D.TypeAAAA || q.Qtype == D.TypeCNAME)
 }
 
-type nameServerClient struct {
-	NameServer
-	dnsClient
-}
-
-func cacheTransform(defaultResolver *Resolver, servers []NameServer) []dnsClient {
-	var nameServerCache []nameServerClient
-	var result []dnsClient
-	for _, ns := range servers {
-		for _, nsc := range nameServerCache {
-			if nsc.NameServer.Equal(ns) {
-				result = append(result, nsc.dnsClient)
-				break
-			}
-		}
-		// not in cache
-		dc := transform([]NameServer{ns}, defaultResolver)
-		if len(dc) > 0 {
-			dc := dc[0]
-			nameServerCache = append(nameServerCache, struct {
-				NameServer
-				dnsClient
-			}{NameServer: ns, dnsClient: dc})
-			result = append(result, dc)
-		}
-	}
-	return result
-}
-
-func transform(servers []NameServer, resolver *Resolver) []dnsClient {
+func transform(servers []NameServer, m proxydialer.ProxyDialer, resolver *Resolver) []dnsClient {
 	ret := make([]dnsClient, 0, len(servers))
 	for _, s := range servers {
+		switch s.Net {
+		case "https":
+			ret = append(ret, newDoHClient(s.Addr, resolver, s.PreferH3, s.Params, s.ProxyAdapter, m, s.ProxyName))
+			continue
+		case "dhcp":
+			ret = append(ret, newDHCPClient(s.Addr, m))
+			continue
+		case "system":
+			ret = append(ret, newSystemClient(m))
+			continue
+		case "rcode":
+			ret = append(ret, newRCodeClient(s.Addr))
+			continue
+		case "quic":
+			if doq, err := newDoQ(resolver, s.Addr, s.ProxyAdapter, m, s.ProxyName); err == nil {
+				ret = append(ret, doq)
+			} else {
+				log.Fatalf("DoQ format error: %v", err)
+			}
+			continue
+		}
+
 		host, port, _ := net.SplitHostPort(s.Addr)
 		ret = append(ret, &client{
 			Client: &D.Client{
@@ -128,10 +132,12 @@ func transform(servers []NameServer, resolver *Resolver) []dnsClient {
 				UDPSize: 4096,
 				Timeout: 5 * time.Second,
 			},
-			port:  port,
-			host:  host,
-			iface: s.Interface,
-			r:     resolver,
+			port:         port,
+			host:         host,
+			iface:        s.Interface,
+			r:            resolver,
+			proxyAdapter: s.ProxyAdapter,
+			proxyName:    s.ProxyName,
 		})
 	}
 	return ret
@@ -154,9 +160,9 @@ func msgToIP(msg *D.Msg) []netip.Addr {
 	for _, answer := range msg.Answer {
 		switch ans := answer.(type) {
 		case *D.AAAA:
-			ips = append(ips, util.IpToAddr(ans.AAAA))
+			ips = append(ips, nnip.IpToAddr(ans.AAAA))
 		case *D.A:
-			ips = append(ips, util.IpToAddr(ans.A))
+			ips = append(ips, nnip.IpToAddr(ans.A))
 		}
 	}
 
@@ -171,6 +177,122 @@ func msgToDomain(msg *D.Msg) string {
 	return ""
 }
 
+type dialHandler func(ctx context.Context, network, addr string) (net.Conn, error)
+
+func getDialHandler(r *Resolver, proxyDialer proxydialer.ProxyDialer, proxyAdapter proxy.ProxyAdapter,
+	proxyName string, opts ...dialer.Option) dialHandler {
+	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+		if len(proxyName) == 0 && proxyAdapter == nil {
+			opts = append(opts, dialer.WithResolver(r))
+			return dialer.DialContext(ctx, network, addr, opts...)
+		} else {
+			host, port, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			uintPort, err := strconv.ParseUint(port, 10, 16)
+			if err != nil {
+				return nil, err
+			}
+			if proxyAdapter == nil {
+				var ok bool
+				proxyAdapter, ok = proxyDialer.Proxies()[proxyName]
+				if !ok {
+					opts = append(opts, dialer.WithInterface(proxyName))
+				}
+			}
+
+			if strings.Contains(network, "tcp") {
+				// tcp can resolve host by remote
+				metadata := &M.Metadata{
+					Network: M.TCP,
+					Host:    host,
+					DstPort: uint16(uintPort),
+				}
+				if proxyAdapter != nil {
+					if proxyAdapter.IsL3Protocol(metadata) { // L3 proxy should resolve domain before to avoid loopback
+						dstIP, err := resolver.ResolveIPWithResolver(ctx, host, r)
+						if err != nil {
+							return nil, err
+						}
+						metadata.Host = ""
+						metadata.DstIP = dstIP
+					}
+					return proxyAdapter.DialContext(ctx, metadata, opts...)
+				}
+				opts = append(opts, dialer.WithResolver(r))
+				return dialer.DialContext(ctx, network, addr, opts...)
+			} else {
+				// udp must resolve host first
+				dstIP, err := resolver.ResolveIPWithResolver(ctx, host, r)
+				if err != nil {
+					return nil, err
+				}
+				metadata := &M.Metadata{
+					Network: M.UDP,
+					Host:    "",
+					DstIP:   dstIP,
+					DstPort: uint16(uintPort),
+				}
+				if proxyAdapter == nil {
+					return dialer.DialContext(ctx, network, addr, opts...)
+				}
+
+				if !proxyAdapter.SupportUDP() {
+					return nil, fmt.Errorf("proxy adapter [%s] UDP is not supported", proxyAdapter)
+				}
+
+				packetConn, err := proxyAdapter.ListenPacketContext(ctx, metadata, opts...)
+				if err != nil {
+					return nil, err
+				}
+
+				return N.NewBindPacketConn(packetConn, metadata.UDPAddr()), nil
+			}
+		}
+	}
+}
+
+func listenPacket(ctx context.Context, proxyDialer proxydialer.ProxyDialer, proxyAdapter C.ProxyAdapter,
+	proxyName string, network string, addr string, r *Resolver, opts ...dialer.Option) (net.PacketConn, error) {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return nil, err
+	}
+	uintPort, err := strconv.ParseUint(port, 10, 16)
+	if err != nil {
+		return nil, err
+	}
+	if proxyAdapter == nil {
+		var ok bool
+		proxyAdapter, ok = proxyDialer.Proxies()[proxyName]
+		if !ok {
+			opts = append(opts, dialer.WithInterface(proxyName))
+		}
+	}
+
+	// udp must resolve host first
+	dstIP, err := resolver.ResolveIPWithResolver(ctx, host, r)
+	if err != nil {
+		return nil, err
+	}
+	metadata := &M.Metadata{
+		Network: M.UDP,
+		Host:    "",
+		DstIP:   dstIP,
+		DstPort: uint16(uintPort),
+	}
+	if proxyAdapter == nil {
+		return dialer.NewDialer(opts...).ListenPacket(ctx, network, "", netip.AddrPortFrom(metadata.DstIP, metadata.DstPort))
+	}
+
+	if !proxyAdapter.SupportUDP() {
+		return nil, fmt.Errorf("proxy adapter [%s] UDP is not supported", proxyAdapter)
+	}
+
+	return proxyAdapter.ListenPacketContext(ctx, metadata, opts...)
+}
+
 func batchExchange(ctx context.Context, clients []dnsClient, m *D.Msg) (msg *D.Msg, cache bool, err error) {
 	cache = true
 	fast, ctx := picker.WithTimeout[*D.Msg](ctx, resolver.DefaultDNSTimeout)
@@ -182,13 +304,15 @@ func batchExchange(ctx context.Context, clients []dnsClient, m *D.Msg) (msg *D.M
 			msg, err = client.ExchangeContext(ctx, m)
 			return msg, false, err
 		}
-		client := client
+		client := client // shadow define client to ensure the value captured by the closure will not be changed in the next loop
 		fast.Go(func() (*D.Msg, error) {
 			log.Debugf("[DNS] resolve %s from %s", domain, client.Address())
 			m, err := client.ExchangeContext(ctx, m)
 			if err != nil {
 				return nil, err
 			} else if cache && (m.Rcode == D.RcodeServerFailure || m.Rcode == D.RcodeRefused) {
+				// currently, cache indicates whether this msg was from a RCode client,
+				// so we would ignore RCode errors from RCode clients.
 				return nil, errors.New("server failure: " + D.RcodeToString[m.Rcode])
 			}
 			if ips := msgToIP(m); len(m.Question) > 0 {

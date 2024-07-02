@@ -9,8 +9,8 @@ import (
 	"io"
 	"strconv"
 
-	. "github.com/breakfreesoftware/luma/common/abx/internal"
-	E "github.com/breakfreesoftware/luma/common/errors"
+	. "github.com/lumavpn/luma/common/abx/internal"
+	E "github.com/lumavpn/luma/common/errors"
 )
 
 var _ xml.TokenReader = (*Reader)(nil)

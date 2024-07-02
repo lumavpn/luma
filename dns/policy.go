@@ -2,6 +2,8 @@ package dns
 
 import (
 	"github.com/lumavpn/luma/component/trie"
+	C "github.com/lumavpn/luma/metadata"
+	"github.com/lumavpn/luma/proxy/provider"
 )
 
 type dnsPolicy interface {
@@ -29,6 +31,19 @@ type geositePolicy struct {
 func (p geositePolicy) Match(domain string) []dnsClient {
 	matched := p.matcher.Match(domain)
 	if matched != p.inverse {
+		return p.dnsClients
+	}
+	return nil
+}
+
+type domainSetPolicy struct {
+	domainSetProvider provider.RuleProvider
+	dnsClients        []dnsClient
+}
+
+func (p domainSetPolicy) Match(domain string) []dnsClient {
+	metadata := &C.Metadata{Host: domain}
+	if ok := p.domainSetProvider.Match(metadata); ok {
 		return p.dnsClients
 	}
 	return nil

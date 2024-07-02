@@ -33,6 +33,7 @@ type Metadata struct {
 	DstPort      uint16 `json:"destinationPort"`
 	Host         string
 
+	Process string         `json:"process"`
 	DNSMode common.DNSMode `json:"dnsMode"`
 
 	RawSrcAddr  net.Addr `json:"-"`

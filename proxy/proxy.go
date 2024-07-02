@@ -28,6 +28,8 @@ type ProxyAdapter interface {
 	DialContext(context.Context, *M.Metadata, ...dialer.Option) (Conn, error)
 	ListenPacketContext(context.Context, *M.Metadata, ...dialer.Option) (PacketConn, error)
 
+	IsL3Protocol(metadata *M.Metadata) bool
+
 	Unwrap(metadata *M.Metadata, touch bool) ProxyAdapter
 }
 

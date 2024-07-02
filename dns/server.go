@@ -7,27 +7,25 @@ import (
 
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/common/sockopt"
+	"github.com/lumavpn/luma/internal/features"
 	"github.com/lumavpn/luma/log"
+
 	D "github.com/miekg/dns"
 )
 
-const dnsDefaultTTL uint32 = 600
+var (
+	address string
+	server  = &Server{}
 
-type handler func(ctx *adapter.DNSContext, r *D.Msg) (*D.Msg, error)
+	dnsDefaultTTL uint32 = 600
+)
 
-// A Server defines parameters for running an DNS server
 type Server struct {
 	*D.Server
-	address string
 	handler handler
 }
 
-type ServerOptions struct {
-	Addr     string
-	Mapper   *ResolverEnhancer
-	Resolver *Resolver
-}
-
+// ServeDNS implement D.Handler ServeDNS
 func (s *Server) ServeDNS(w D.ResponseWriter, r *D.Msg) {
 	msg, err := handlerWithContext(context.Background(), s.handler, r)
 	if err != nil {
@@ -38,29 +36,62 @@ func (s *Server) ServeDNS(w D.ResponseWriter, r *D.Msg) {
 	w.WriteMsg(msg)
 }
 
-func handlerWithContext(ctx context.Context, handler handler, msg *D.Msg) (*D.Msg, error) {
+func handlerWithContext(stdCtx context.Context, handler handler, msg *D.Msg) (*D.Msg, error) {
 	if len(msg.Question) == 0 {
 		return nil, errors.New("at least one question is required")
 	}
 
-	return handler(adapter.NewDNSContext(ctx, msg), msg)
+	ctx := adapter.NewDNSContext(stdCtx, msg)
+	return handler(ctx, msg)
 }
 
-// NewServer creates a new DNS server
-func NewServer(opts ServerOptions) (*Server, error) {
-	addr := opts.Addr
-	if addr == "" {
-		return nil, errors.New("Missing address")
+func (s *Server) SetHandler(handler handler) {
+	s.handler = handler
+}
+
+func ReCreateServer(addr string, resolver *Resolver, mapper *ResolverEnhancer) {
+	if features.CMFA {
+		UpdateIsolateHandler(resolver, mapper)
 	}
+
+	if addr == address && resolver != nil {
+		handler := NewHandler(resolver, mapper)
+		server.SetHandler(handler)
+		return
+	}
+
+	if server.Server != nil {
+		server.Shutdown()
+		server = &Server{}
+		address = ""
+	}
+
+	if addr == "" {
+		return
+	}
+
+	var err error
+	defer func() {
+		if err != nil {
+			log.Errorf("Start DNS server error: %s", err.Error())
+		}
+	}()
+
+	_, port, err := net.SplitHostPort(addr)
+	if port == "0" || port == "" || err != nil {
+		return
+	}
+
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	p, err := net.ListenUDP("udp", udpAddr)
 	if err != nil {
-		return nil, err
+		return
 	}
+
 	err = sockopt.UDPReuseaddr(p)
 	if err != nil {
 		log.Warnf("Failed to Reuse UDP Address: %s", err)
@@ -68,17 +99,14 @@ func NewServer(opts ServerOptions) (*Server, error) {
 		err = nil
 	}
 
-	handler := NewHandler(opts.Resolver, opts.Mapper)
-	s := &Server{
-		address: addr,
-		handler: handler,
-	}
-	s.Server = &D.Server{Addr: addr, PacketConn: p, Handler: s}
+	address = addr
+	handler := NewHandler(resolver, mapper)
+	server = &Server{handler: handler}
+	server.Server = &D.Server{Addr: addr, PacketConn: p, Handler: server}
 
 	go func() {
-		s.ActivateAndServe()
+		server.ActivateAndServe()
 	}()
 
 	log.Infof("DNS server listening at: %s", p.LocalAddr().String())
-	return s, nil
 }

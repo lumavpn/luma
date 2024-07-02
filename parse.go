@@ -37,6 +37,11 @@ func (lu *Luma) parseConfig(cfg *config.Config) (map[string]proxy.Proxy, map[str
 	if err != nil {
 		return nil, nil, err
 	}
+	dnsResult, err := lu.parseDNS(cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	cfg.DNS = dnsResult.config
 
 	cfg.Tun, err = lu.parseTun(cfg)
 	if err != nil {

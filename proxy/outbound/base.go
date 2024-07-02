@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net"
 
+	"github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/dialer"
-	"github.com/lumavpn/luma/dns"
 	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/proto"
@@ -25,7 +25,7 @@ type Base struct {
 	iface  string
 	rmark  int
 	mpTcp  bool
-	prefer dns.DNSPrefer
+	prefer common.DNSPrefer
 }
 
 type BasicOption struct {
@@ -62,6 +62,11 @@ func (b *Base) SupportUDP() bool {
 	return b.udp
 }
 
+// IsL3Protocol implements proxy.Proxy
+func (b *Base) IsL3Protocol(metadata *M.Metadata) bool {
+	return false
+}
+
 func (b *Base) DialContext(context.Context, *M.Metadata, ...dialer.Option) (net.Conn, error) {
 	return nil, errors.ErrUnsupported
 }
@@ -84,13 +89,13 @@ func (b *Base) DialOptions(opts ...dialer.Option) []dialer.Option {
 	}
 
 	switch b.prefer {
-	case dns.IPv4Only:
+	case common.IPv4Only:
 		opts = append(opts, dialer.WithOnlySingleStack(true))
-	case dns.IPv6Only:
+	case common.IPv6Only:
 		opts = append(opts, dialer.WithOnlySingleStack(false))
-	case dns.IPv4Prefer:
+	case common.IPv4Prefer:
 		opts = append(opts, dialer.WithPreferIPv4())
-	case dns.IPv6Prefer:
+	case common.IPv6Prefer:
 		opts = append(opts, dialer.WithPreferIPv6())
 	default:
 	}

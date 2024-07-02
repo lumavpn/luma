@@ -6,14 +6,20 @@ import (
 	"time"
 
 	"github.com/lumavpn/luma/adapter"
+	C "github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/common/cache"
+	"github.com/lumavpn/luma/common/nnip"
+	"github.com/lumavpn/luma/component/fakeip"
+	R "github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/log"
 
-	R "github.com/lumavpn/luma/dns/resolver"
 	D "github.com/miekg/dns"
 )
 
-type middleware func(next handler) handler
+type (
+	handler    func(ctx *adapter.DNSContext, r *D.Msg) (*D.Msg, error)
+	middleware func(next handler) handler
+)
 
 func withHosts(hosts R.Hosts, mapping *cache.LruCache[netip.Addr, string]) middleware {
 	return func(next handler) handler {
@@ -92,6 +98,86 @@ func withHosts(hosts R.Hosts, mapping *cache.LruCache[netip.Addr, string]) middl
 	}
 }
 
+func withMapping(mapping *cache.LruCache[netip.Addr, string]) middleware {
+	return func(next handler) handler {
+		return func(ctx *adapter.DNSContext, r *D.Msg) (*D.Msg, error) {
+			q := r.Question[0]
+
+			if !isIPRequest(q) {
+				return next(ctx, r)
+			}
+
+			msg, err := next(ctx, r)
+			if err != nil {
+				return nil, err
+			}
+
+			host := strings.TrimRight(q.Name, ".")
+
+			for _, ans := range msg.Answer {
+				var ip netip.Addr
+				var ttl uint32
+
+				switch a := ans.(type) {
+				case *D.A:
+					ip = nnip.IpToAddr(a.A)
+					ttl = a.Hdr.Ttl
+				case *D.AAAA:
+					ip = nnip.IpToAddr(a.AAAA)
+					ttl = a.Hdr.Ttl
+				default:
+					continue
+				}
+
+				if ttl < 1 {
+					ttl = 1
+				}
+
+				mapping.SetWithExpire(ip, host, time.Now().Add(time.Second*time.Duration(ttl)))
+			}
+
+			return msg, nil
+		}
+	}
+}
+
+func withFakeIP(fakePool *fakeip.Pool) middleware {
+	return func(next handler) handler {
+		return func(ctx *adapter.DNSContext, r *D.Msg) (*D.Msg, error) {
+			q := r.Question[0]
+
+			host := strings.TrimRight(q.Name, ".")
+			if fakePool.ShouldSkipped(host) {
+				return next(ctx, r)
+			}
+
+			switch q.Qtype {
+			case D.TypeAAAA, D.TypeSVCB, D.TypeHTTPS:
+				return handleMsgWithEmptyAnswer(r), nil
+			}
+
+			if q.Qtype != D.TypeA {
+				return next(ctx, r)
+			}
+
+			rr := &D.A{}
+			rr.Hdr = D.RR_Header{Name: q.Name, Rrtype: D.TypeA, Class: D.ClassINET, Ttl: dnsDefaultTTL}
+			ip := fakePool.Lookup(host)
+			rr.A = ip.AsSlice()
+			msg := r.Copy()
+			msg.Answer = []D.RR{rr}
+
+			ctx.SetType(string(adapter.DNSTypeFakeIP))
+			setMsgTTL(msg, 1)
+			msg.SetRcode(r, D.RcodeSuccess)
+			msg.Authoritative = true
+			msg.RecursionAvailable = true
+
+			return msg, nil
+		}
+	}
+}
+
 func withResolver(resolver *Resolver) handler {
 	return func(ctx *adapter.DNSContext, r *D.Msg) (*D.Msg, error) {
 		ctx.SetType(string(adapter.DNSTypeRaw))
@@ -131,6 +217,14 @@ func NewHandler(resolver *Resolver, mapper *ResolverEnhancer) handler {
 
 	if resolver.hosts != nil {
 		middlewares = append(middlewares, withHosts(R.NewHosts(resolver.hosts), mapper.mapping))
+	}
+
+	if mapper.mode == C.DNSFakeIP {
+		middlewares = append(middlewares, withFakeIP(mapper.fakePool))
+	}
+
+	if mapper.mode != C.DNSNormal {
+		middlewares = append(middlewares, withMapping(mapper.mapping))
 	}
 
 	return compose(middlewares, withResolver(resolver))

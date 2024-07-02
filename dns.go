@@ -12,10 +12,13 @@ import (
 	"github.com/lumavpn/luma/config"
 	"github.com/lumavpn/luma/dns"
 	"github.com/lumavpn/luma/dns/resolver"
+	"github.com/lumavpn/luma/geodata/router"
 	"github.com/lumavpn/luma/log"
+	"github.com/lumavpn/luma/proxy/provider"
 )
 
 type dnsResult struct {
+	config            *config.DNS
 	hosts             *trie.DomainTrie[resolver.HostValue]
 	defaultNameServer []dns.NameServer
 	nameServer        []dns.NameServer
@@ -105,9 +108,25 @@ func parseNameServer(servers []string, preferH3 bool) ([]dns.NameServer, error) 
 	return nameservers, nil
 }
 
-func (lu *Luma) parseDNS(cfg *config.DNSConfig) (result *dnsResult, err error) {
-	result = &dnsResult{}
-	result.hosts, err = parseHosts(cfg.Hosts)
+func (lu *Luma) parseDNS(ccfg *config.Config) (result *dnsResult, err error) {
+	cfg := ccfg.RawDNS
+	dnsConfig := &config.DNS{
+		Enable:       cfg.Enable,
+		Listen:       cfg.Listen,
+		PreferH3:     cfg.PreferH3,
+		IPv6Timeout:  cfg.IPv6Timeout,
+		IPv6:         cfg.IPv6,
+		EnhancedMode: cfg.EnhancedMode,
+		FallbackFilter: config.FallbackFilter{
+			IPCIDR:  []netip.Prefix{},
+			GeoSite: []router.DomainMatcher{},
+		},
+	}
+
+	result = &dnsResult{
+		config: dnsConfig,
+	}
+	result.hosts, err = parseHosts(ccfg.Hosts)
 	if err != nil {
 		return
 	}
@@ -118,16 +137,16 @@ func (lu *Luma) parseDNS(cfg *config.DNSConfig) (result *dnsResult, err error) {
 	if cfg.Enable && len(cfg.NameServer) == 0 {
 		return nil, fmt.Errorf("name server cannot be empty")
 	}
-	if result.nameServer, err = parseNameServer(cfg.NameServer, cfg.PreferH3); err != nil {
+	if dnsConfig.NameServer, err = parseNameServer(cfg.NameServer, cfg.PreferH3); err != nil {
 		return nil, err
 	}
 	if len(cfg.DefaultNameserver) == 0 {
 		return nil, errors.New("default nameserver should have at least one nameserver")
 	}
-	if result.defaultNameServer, err = parseNameServer(cfg.DefaultNameserver, cfg.PreferH3); err != nil {
+	if dnsConfig.DefaultNameserver, err = parseNameServer(cfg.DefaultNameserver, cfg.PreferH3); err != nil {
 		return nil, err
 	}
-	for _, ns := range result.defaultNameServer {
+	for _, ns := range dnsConfig.DefaultNameserver {
 		if ns.Net == "system" {
 			continue
 		}
@@ -145,43 +164,57 @@ func (lu *Luma) parseDNS(cfg *config.DNSConfig) (result *dnsResult, err error) {
 	return
 }
 
-func (lu *Luma) updateDNS(cfg *config.DNSConfig) error {
-	if cfg == nil || !cfg.Enable {
+func (lu *Luma) updateDNS(c *config.DNS, ruleProvider map[string]provider.RuleProvider) error {
+	if !c.Enable {
 		resolver.DefaultResolver = nil
+		resolver.DefaultHostMapper = nil
+		resolver.DefaultLocalServer = nil
+		dns.ReCreateServer("", nil, nil)
 		return nil
 	}
-
-	resolver.DisableIPv6 = !cfg.IPv6
-
-	result, err := lu.parseDNS(cfg)
-	if err != nil {
-		return err
+	log.Debug("Updating dns")
+	cfg := dns.Config{
+		Main:         c.NameServer,
+		Fallback:     c.Fallback,
+		IPv6:         c.IPv6,
+		IPv6Timeout:  c.IPv6Timeout,
+		EnhancedMode: c.EnhancedMode,
+		Pool:         c.FakeIPRange,
+		Hosts:        c.Hosts,
+		FallbackFilter: dns.FallbackFilter{
+			GeoIP:     c.FallbackFilter.GeoIP,
+			GeoIPCode: c.FallbackFilter.GeoIPCode,
+			IPCIDR:    c.FallbackFilter.IPCIDR,
+			Domain:    c.FallbackFilter.Domain,
+			GeoSite:   c.FallbackFilter.GeoSite,
+		},
+		Default:        c.DefaultNameserver,
+		Policy:         c.NameServerPolicy,
+		ProxyServer:    c.ProxyServerNameserver,
+		RuleProviders:  ruleProvider,
+		CacheAlgorithm: c.CacheAlgorithm,
 	}
 
-	log.Debugf("Updating dns..name servers are %s", result.nameServer)
+	r := dns.NewResolver(cfg, lu.proxyDialer)
+	pr := dns.NewProxyServerHostResolver(r)
+	m := dns.NewEnhancer(cfg)
 
-	opts := &dns.Options{
-		Main:         result.nameServer,
-		IPv6:         cfg.IPv6,
-		Hosts:        result.hosts,
-		Default:      result.defaultNameServer,
-		EnhancedMode: cfg.EnhancedMode,
+	// reuse cache of old host mapper
+	if old := resolver.DefaultHostMapper; old != nil {
+		m.PatchFrom(old.(*dns.ResolverEnhancer))
 	}
-	r := dns.NewResolver(opts)
-	m := dns.NewEnhancer(opts)
 
 	resolver.DefaultResolver = r
-	resolver.DefaultHosts = resolver.NewHosts(result.hosts)
+	resolver.DefaultHostMapper = m
 	resolver.DefaultLocalServer = dns.NewLocalServer(r, m)
-	serverOptions := dns.ServerOptions{
-		Addr:     cfg.Listen,
-		Mapper:   m,
-		Resolver: r,
+	resolver.UseSystemHosts = c.UseSystemHosts
+
+	if pr.Invalid() {
+		resolver.ProxyServerHostResolver = pr
 	}
 
-	_, err = dns.NewServer(serverOptions)
-
-	return err
+	dns.ReCreateServer(c.Listen, r, m)
+	return nil
 }
 
 func parseHosts(hosts map[string]any) (*trie.DomainTrie[resolver.HostValue], error) {

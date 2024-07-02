@@ -2,36 +2,39 @@ package dns
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/netip"
 	"strings"
 
+	"github.com/lumavpn/luma/component/ca"
 	"github.com/lumavpn/luma/dialer"
 	"github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/log"
+	"github.com/lumavpn/luma/proxy"
+	"github.com/lumavpn/luma/proxydialer"
+
 	D "github.com/miekg/dns"
 	"github.com/zhangyunhao116/fastrand"
 )
 
 type client struct {
 	*D.Client
-	addr      string
-	host      string
-	port      string
-	iface     string
-	proxyName string
-
 	r *Resolver
-}
 
-type dnsClient interface {
-	ExchangeContext(ctx context.Context, m *D.Msg) (msg *D.Msg, err error)
-	Address() string
+	port         string
+	host         string
+	iface        string
+	proxyAdapter proxy.ProxyAdapter
+	proxyDialer  proxydialer.ProxyDialer
+	proxyName    string
+	addr         string
 }
 
 var _ dnsClient = (*client)(nil)
 
+// Address implements dnsClient
 func (c *client) Address() string {
 	if len(c.addr) != 0 {
 		return c.addr
@@ -49,9 +52,12 @@ func (c *client) Address() string {
 }
 
 func (c *client) ExchangeContext(ctx context.Context, m *D.Msg) (*D.Msg, error) {
-	var ip netip.Addr
-	var err error
+	var (
+		ip  netip.Addr
+		err error
+	)
 	if c.r == nil {
+		// a default ip dns
 		if ip, err = netip.ParseAddr(c.host); err != nil {
 			return nil, fmt.Errorf("dns %s not a valid ip", c.host)
 		}
@@ -75,7 +81,7 @@ func (c *client) ExchangeContext(ctx context.Context, m *D.Msg) (*D.Msg, error) 
 		options = append(options, dialer.WithInterface(c.iface))
 	}
 
-	dialHandler := getDialer(c.r, c.proxyName, options...)
+	dialHandler := getDialHandler(c.r, c.proxyDialer, c.proxyAdapter, c.proxyName, options...)
 	addr := net.JoinHostPort(ip.String(), c.port)
 	conn, err := dialHandler(ctx, network, addr)
 	if err != nil {
@@ -85,12 +91,17 @@ func (c *client) ExchangeContext(ctx context.Context, m *D.Msg) (*D.Msg, error) 
 		_ = conn.Close()
 	}()
 
+	// miekg/dns ExchangeContext doesn't respond to context cancel.
+	// this is a workaround
 	type result struct {
 		msg *D.Msg
 		err error
 	}
 	ch := make(chan result, 1)
 	go func() {
+		if strings.HasSuffix(c.Client.Net, "tls") {
+			conn = tls.Client(conn, ca.GetGlobalTLSConfig(c.Client.TLSConfig))
+		}
 
 		dConn := &D.Conn{
 			Conn:         conn,
@@ -101,12 +112,12 @@ func (c *client) ExchangeContext(ctx context.Context, m *D.Msg) (*D.Msg, error) 
 
 		msg, _, err := c.Client.ExchangeWithConn(m, dConn)
 
+		// Resolvers MUST resend queries over TCP if they receive a truncated UDP response (with TC=1 set)!
 		if msg != nil && msg.Truncated && c.Client.Net == "" {
-			tcpClient := *c.Client
+			tcpClient := *c.Client // copy a client
 			tcpClient.Net = "tcp"
 			network = "tcp"
-			log.Debugf("[DNS] Truncated reply from %s:%s for %s over UDP, retrying over TCP", c.host, c.port,
-				m.Question[0].String())
+			log.Debugf("[DNS] Truncated reply from %s:%s for %s over UDP, retrying over TCP", c.host, c.port, m.Question[0].String())
 			dConn.Conn, err = dialHandler(ctx, network, addr)
 			if err != nil {
 				ch <- result{msg, err}

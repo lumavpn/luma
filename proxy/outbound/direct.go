@@ -5,9 +5,9 @@ import (
 	"errors"
 	"net/netip"
 
+	C "github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/component/loopback"
 	"github.com/lumavpn/luma/dialer"
-	"github.com/lumavpn/luma/dns"
 	"github.com/lumavpn/luma/dns/resolver"
 	"github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
@@ -26,7 +26,7 @@ func NewDirect() *Direct {
 			name:   proto.String(),
 			proto:  proto,
 			udp:    true,
-			prefer: dns.DualStack,
+			prefer: C.DualStack,
 		},
 		loopBack: loopback.NewDetector(),
 	}

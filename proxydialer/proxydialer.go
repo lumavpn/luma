@@ -24,6 +24,7 @@ type proxyDialer struct {
 
 type ProxyDialer interface {
 	Match(m *metadata.Metadata) (proxy.Proxy, rule.Rule, error)
+	Proxies() map[string]proxy.Proxy
 	SelectProxy(*metadata.Metadata) (proxy.Proxy, error)
 	SelectProxyByName(string) (proxy.Proxy, error)
 	SetProxies(map[string]proxy.Proxy)
@@ -59,6 +60,13 @@ func (pd *proxyDialer) getRules(m *metadata.Metadata) []rule.Rule {
 		log.Debug("[Rule] use default rules")
 		return pd.rules
 	}
+}
+
+// Proxies return all proxies
+func (pd *proxyDialer) Proxies() map[string]proxy.Proxy {
+	pd.mu.RLock()
+	defer pd.mu.RUnlock()
+	return pd.proxies
 }
 
 func shouldResolveIP(rule rule.Rule, m *metadata.Metadata) bool {
