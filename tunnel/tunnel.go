@@ -6,13 +6,14 @@ import (
 
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/common/atomic"
+	M "github.com/lumavpn/luma/metadata"
 )
 
 type tunnel struct {
 	fakeIPRange netip.Prefix
 	status      atomic.TypedValue[TunnelStatus]
 	tcpQueue    chan adapter.TCPConn
-	udpQueue    chan adapter.UDPConn
+	udpQueue    chan adapter.PacketAdapter
 }
 
 type Tunnel interface {
@@ -24,7 +25,7 @@ func New() Tunnel {
 	t := &tunnel{
 		status:   atomic.NewTypedValue[TunnelStatus](Suspend),
 		tcpQueue: make(chan adapter.TCPConn),
-		udpQueue: make(chan adapter.UDPConn),
+		udpQueue: make(chan adapter.PacketAdapter, 200),
 	}
 	go t.process()
 	return t
@@ -34,8 +35,12 @@ func (t *tunnel) HandleTCP(conn adapter.TCPConn) {
 	t.TCPIn() <- conn
 }
 
-func (t *tunnel) HandleUDP(conn adapter.UDPConn) {
-	t.UDPIn() <- conn
+func (t *tunnel) HandleUDPPacket(packet adapter.UDPPacket, metadata *M.Metadata) {
+	packetAdapter := adapter.NewPacketAdapter(packet, metadata)
+	select {
+	case t.udpQueue <- packetAdapter:
+	default:
+	}
 }
 
 // TCPIn return fan-in TCP queue.
@@ -44,7 +49,7 @@ func (t *tunnel) TCPIn() chan<- adapter.TCPConn {
 }
 
 // UDPIn return fan-in UDP queue.
-func (t *tunnel) UDPIn() chan<- adapter.UDPConn {
+func (t *tunnel) UDPIn() chan<- adapter.PacketAdapter {
 	return t.udpQueue
 }
 

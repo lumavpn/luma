@@ -1,7 +1,10 @@
 package adapter
 
-// TransportHandler is a TCP/UDP connection handler
+import (
+	M "github.com/lumavpn/luma/metadata"
+)
+
 type TransportHandler interface {
-	HandleTCP(TCPConn)
-	HandleUDP(UDPConn)
+	HandleTCPConn(TCPConn)
+	HandleUDPPacket(packet UDPPacket, metadata *M.Metadata)
 }
