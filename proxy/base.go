@@ -1,7 +1,7 @@
 package proxy
 
 import (
-	"github.com/breakfreesoftware/luma/dialer"
+	"github.com/lumavpn/luma/dialer"
 	"github.com/lumavpn/luma/proxy/proto"
 )
 
