@@ -23,6 +23,14 @@ type Metadata struct {
 	InIP   netip.Addr `json:"inboundIP"`
 	InPort uint16     `json:"inboundPort,string"`
 
+	Uid          uint32 `json:"uid"`
+	Process      string `json:"process"`
+	ProcessPath  string `json:"processPath"`
+	SpecialProxy string `json:"specialProxy"`
+	SpecialRules string `json:"specialRules"`
+	RemoteDst    string `json:"remoteDestination"`
+	DSCP         uint8  `json:"dscp"`
+
 	Source      Socksaddr
 	Destination Socksaddr
 }

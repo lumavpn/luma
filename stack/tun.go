@@ -5,8 +5,8 @@ import (
 	"io"
 	"net/netip"
 
+	"github.com/lumavpn/luma/common/ranges"
 	N "github.com/sagernet/sing/common/network"
-	"github.com/sagernet/sing/common/ranges"
 )
 
 type Handler interface {
@@ -28,6 +28,7 @@ type Options struct {
 	MTU                      uint32
 	GSO                      bool
 	AutoRoute                bool
+	AutoDetectInterface      bool
 	StrictRoute              bool
 	Inet4RouteAddress        []netip.Prefix
 	Inet6RouteAddress        []netip.Prefix

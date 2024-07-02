@@ -14,6 +14,12 @@ func WithOptions(metadata *M.Metadata, optons ...Option) {
 	}
 }
 
+func WithInName(name string) Option {
+	return func(metadata *M.Metadata) {
+		metadata.InName = name
+	}
+}
+
 func WithDstAddr(addr net.Addr) Option {
 	return func(metadata *M.Metadata) {
 		_ = metadata.SetRemoteAddress(addr.String())
@@ -43,5 +49,17 @@ func WithInAddr(addr net.Addr) Option {
 func WithInUser(user string) Option {
 	return func(metadata *M.Metadata) {
 		metadata.InUser = user
+	}
+}
+
+func WithSpecialRules(specialRules string) Option {
+	return func(metadata *M.Metadata) {
+		metadata.SpecialRules = specialRules
+	}
+}
+
+func WithSpecialProxy(specialProxy string) Option {
+	return func(metadata *M.Metadata) {
+		metadata.SpecialProxy = specialProxy
 	}
 }

@@ -10,4 +10,5 @@ enum Proto {
   Socks5 = 5;
   Shadowsocks = 6;
   Relay = 7;
+  Tun = 8;
 }

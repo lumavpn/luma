@@ -18,6 +18,8 @@ type Config struct {
 	TunOptions             Options
 	UDPTimeout             int64
 	Handler                Handler
+	ForwarderBindInterface bool
+	IncludeAllNetworks     bool
 }
 
 // NewStack creates a new instance of Stack with the given options
