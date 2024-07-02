@@ -1,8 +1,13 @@
 package proxydialer
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 func TestProxyDialer_AddProxies(t *testing.T) {
 	pd := New()
-	pd.AddProxies()
+	err := pd.AddProxies(nil)
+	require.NoError(t, err)
 }

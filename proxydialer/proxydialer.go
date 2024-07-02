@@ -4,7 +4,7 @@ import "github.com/lumavpn/luma/proxy"
 
 // ProxyDialer is the primary mechanism for dialing proxies that Luma is configured to use
 type ProxyDialer interface {
-	AddProxies(map[string]proxy.Proxy)
+	AddProxies(map[string]proxy.Proxy) error
 }
 
 type proxyDialer struct {

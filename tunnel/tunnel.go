@@ -5,12 +5,15 @@ import (
 	"runtime"
 
 	"github.com/lumavpn/luma/adapter"
+	C "github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/common/atomic"
+	"github.com/lumavpn/luma/log"
 	M "github.com/lumavpn/luma/metadata"
 )
 
 type tunnel struct {
 	fakeIPRange netip.Prefix
+	mode        C.TunnelMode
 	status      atomic.TypedValue[TunnelStatus]
 	tcpQueue    chan adapter.TCPConn
 	udpQueue    chan adapter.PacketAdapter
@@ -18,6 +21,10 @@ type tunnel struct {
 
 type Tunnel interface {
 	adapter.TransportHandler
+	FakeIPRange() netip.Prefix
+	Mode() C.TunnelMode
+	SetFakeIPRange(p netip.Prefix)
+	SetMode(C.TunnelMode)
 }
 
 // New returns a new instance of Tunnel
@@ -29,6 +36,41 @@ func New() Tunnel {
 	}
 	go t.process()
 	return t
+}
+
+// Mode return current mode
+func (t *tunnel) Mode() C.TunnelMode {
+	return t.mode
+}
+
+// SetMode change the mode of tunnel
+func (t *tunnel) SetMode(m C.TunnelMode) {
+	log.Debugf("Setting tunnel mode to %s", m)
+	t.mode = m
+}
+
+func (t *tunnel) FakeIPRange() netip.Prefix {
+	return t.fakeIPRange
+}
+
+func (t *tunnel) SetFakeIPRange(fakeIPRange netip.Prefix) {
+	t.fakeIPRange = fakeIPRange
+}
+
+func (t *tunnel) OnSuspend() {
+	t.status.Store(Suspend)
+}
+
+func (t *tunnel) OnInnerLoading() {
+	t.status.Store(Inner)
+}
+
+func (t *tunnel) OnRunning() {
+	t.status.Store(Running)
+}
+
+func (t *tunnel) Status() TunnelStatus {
+	return t.status.Load()
 }
 
 func (t *tunnel) HandleTCPConn(conn adapter.TCPConn) {

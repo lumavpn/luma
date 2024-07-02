@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	C "github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/stack"
 	"gopkg.in/yaml.v3"
@@ -17,6 +18,8 @@ import (
 type Config struct {
 	// General configuration
 	General `yaml:",inline"`
+
+	Mode C.TunnelMode `yaml:"mode"`
 
 	*Tun `yaml:"tun"`
 }

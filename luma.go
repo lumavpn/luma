@@ -5,8 +5,10 @@ import (
 	"sync"
 
 	"github.com/lumavpn/luma/config"
+	"github.com/lumavpn/luma/listener/tun"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/proxy"
+	"github.com/lumavpn/luma/stack"
 	"github.com/lumavpn/luma/tunnel"
 )
 
@@ -17,9 +19,12 @@ type Luma struct {
 	proxies map[string]proxy.Proxy
 
 	// Tunnel
-	tunnel tunnel.Tunnel
+	stack       stack.Stack
+	tunListener *tun.Listener
+	tunnel      tunnel.Tunnel
 
-	mu sync.Mutex
+	mu      sync.Mutex
+	started bool
 }
 
 // New creates a new instance of Luma
@@ -33,7 +38,27 @@ func New(cfg *config.Config) (*Luma, error) {
 // Start starts the default engine running Luma. If there is any issue with the setup process, an error is returned
 func (lu *Luma) Start(ctx context.Context) error {
 	log.Debug("Starting new instance")
-	return lu.applyConfig(lu.config)
+	cfg := lu.config
+	if err := lu.parseConfig(cfg); err != nil {
+		return err
+	}
+
+	if err := lu.applyConfig(cfg); err != nil {
+		return err
+	}
+	log.Debug("Luma successfully started")
+	lu.SetStarted(true)
+	return nil
+}
+
+func (lu *Luma) updateGeneral(ctx context.Context, cfg *config.Config) {
+	lu.tunnel.SetMode(cfg.Mode)
+}
+
+func (lu *Luma) SetStarted(started bool) {
+	lu.mu.Lock()
+	defer lu.mu.Unlock()
+	lu.started = started
 }
 
 // Stop stops running the Luma engine

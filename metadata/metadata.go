@@ -30,9 +30,6 @@ type Metadata struct {
 	SpecialRules string `json:"specialRules"`
 	RemoteDst    string `json:"remoteDestination"`
 	DSCP         uint8  `json:"dscp"`
-
-	Source      Socksaddr
-	Destination Socksaddr
 }
 
 func (m *Metadata) SetRemoteAddress(rawAddress string) error {
