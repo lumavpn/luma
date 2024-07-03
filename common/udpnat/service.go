@@ -7,10 +7,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/lumavpn/luma/common/buf"
 	"github.com/lumavpn/luma/common/cache"
+	M "github.com/lumavpn/luma/common/metadata"
 	N "github.com/lumavpn/luma/common/network"
-	"github.com/lumavpn/luma/common/pool"
-	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/util"
 )
 
@@ -44,7 +44,7 @@ func New[K comparable](maxAge int64, handler Handler) *Service[K] {
 func (s *Service[T]) WriteIsThreadUnsafe() {
 }
 
-func (s *Service[T]) NewPacketDirect(ctx context.Context, key T, conn N.PacketConn, buffer *pool.Buffer, metadata M.Metadata) {
+func (s *Service[T]) NewPacketDirect(ctx context.Context, key T, conn N.PacketConn, buffer *buf.Buffer, metadata M.Metadata) {
 	s.NewContextPacket(ctx, key, buffer, metadata, func(natConn N.PacketConn) (context.Context, N.PacketWriter) {
 		return ctx, &DirectBackWriter{conn, natConn}
 	})
@@ -55,7 +55,7 @@ type DirectBackWriter struct {
 	Nat    N.PacketConn
 }
 
-func (w *DirectBackWriter) WritePacket(buffer *pool.Buffer, addr M.Socksaddr) error {
+func (w *DirectBackWriter) WritePacket(buffer *buf.Buffer, addr M.Socksaddr) error {
 	return w.Source.WritePacket(buffer, M.SocksaddrFromNet(w.Nat.LocalAddr()))
 }
 
@@ -63,13 +63,13 @@ func (w *DirectBackWriter) Upstream() any {
 	return w.Source
 }
 
-func (s *Service[T]) NewPacket(ctx context.Context, key T, buffer *pool.Buffer, metadata M.Metadata, init func(natConn N.PacketConn) N.PacketWriter) {
+func (s *Service[T]) NewPacket(ctx context.Context, key T, buffer *buf.Buffer, metadata M.Metadata, init func(natConn N.PacketConn) N.PacketWriter) {
 	s.NewContextPacket(ctx, key, buffer, metadata, func(natConn N.PacketConn) (context.Context, N.PacketWriter) {
 		return ctx, init(natConn)
 	})
 }
 
-func (s *Service[T]) NewContextPacket(ctx context.Context, key T, buffer *pool.Buffer, metadata M.Metadata, init func(natConn N.PacketConn) (context.Context, N.PacketWriter)) {
+func (s *Service[T]) NewContextPacket(ctx context.Context, key T, buffer *buf.Buffer, metadata M.Metadata, init func(natConn N.PacketConn) (context.Context, N.PacketWriter)) {
 	c, loaded := s.nat.LoadOrStore(key, func() *conn {
 		c := &conn{
 			data:       make(chan packet, 64),
@@ -106,7 +106,7 @@ func (s *Service[T]) NewContextPacket(ctx context.Context, key T, buffer *pool.B
 }
 
 type packet struct {
-	data        *pool.Buffer
+	data        *buf.Buffer
 	destination M.Socksaddr
 }
 
@@ -122,7 +122,7 @@ type conn struct {
 	readWaitOptions N.ReadWaitOptions
 }
 
-func (c *conn) ReadPacket(buffer *pool.Buffer) (addr M.Socksaddr, err error) {
+func (c *conn) ReadPacket(buffer *buf.Buffer) (addr M.Socksaddr, err error) {
 	select {
 	case p := <-c.data:
 		_, err = buffer.ReadOnceFrom(p.data)
@@ -133,7 +133,7 @@ func (c *conn) ReadPacket(buffer *pool.Buffer) (addr M.Socksaddr, err error) {
 	}
 }
 
-func (c *conn) WritePacket(buffer *pool.Buffer, destination M.Socksaddr) error {
+func (c *conn) WritePacket(buffer *buf.Buffer, destination M.Socksaddr) error {
 	return c.source.WritePacket(buffer, destination)
 }
 

@@ -1,25 +1,22 @@
 package config
 
 import (
-	"fmt"
-	"os"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestParseConfig(t *testing.T) {
-	_, err := ParseConfig("")
-	require.True(t, os.IsNotExist(err))
-}
+func TestConfig_Clone(t *testing.T) {
+	c := &Config{
+		Inbound: Inbound{
+			SocksPort: 8787,
+		},
+		LogLevel: "debug",
+		Proxy:    "socksproxy",
+	}
+	cloned := c.Clone()
+	assert.Equal(t, "socksproxy", cloned.Proxy)
 
-func TestParseBytes(t *testing.T) {
-	_, err := ParseBytes([]byte(`loglevel: invalid`))
-	require.EqualError(t, err, "invalid log level")
-	cfg, err := ParseBytes([]byte(`loglevel: debug`))
-	require.NoError(t, err)
-	b, err := yaml.Marshal(cfg)
-	require.NoError(t, err)
-	fmt.Println(string(b))
+	c.Proxy = "httpproxy"
+	assert.Equal(t, "socksproxy", cloned.Proxy)
 }

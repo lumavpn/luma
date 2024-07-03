@@ -3,9 +3,9 @@ package udpnat
 import (
 	"io"
 
+	"github.com/lumavpn/luma/common/buf"
+	M "github.com/lumavpn/luma/common/metadata"
 	N "github.com/lumavpn/luma/common/network"
-	"github.com/lumavpn/luma/common/pool"
-	M "github.com/lumavpn/luma/metadata"
 )
 
 var _ N.PacketReadWaiter = (*conn)(nil)
@@ -15,7 +15,7 @@ func (c *conn) InitializeReadWaiter(options N.ReadWaitOptions) (needCopy bool) {
 	return false
 }
 
-func (c *conn) WaitReadPacket() (buffer *pool.Buffer, destination M.Socksaddr, err error) {
+func (c *conn) WaitReadPacket() (buffer *buf.Buffer, destination M.Socksaddr, err error) {
 	select {
 	case p := <-c.data:
 		if c.readWaitOptions.NeedHeadroom() {

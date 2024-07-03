@@ -1,8 +1,8 @@
 package network
 
 import (
-	"github.com/lumavpn/luma/common/pool"
-	M "github.com/lumavpn/luma/metadata"
+	"github.com/lumavpn/luma/common/buf"
+	M "github.com/lumavpn/luma/common/metadata"
 )
 
 type ReadWaitable interface {
@@ -19,22 +19,22 @@ func (o ReadWaitOptions) NeedHeadroom() bool {
 	return o.FrontHeadroom > 0 || o.RearHeadroom > 0
 }
 
-func (o ReadWaitOptions) NewBuffer() *pool.Buffer {
-	return o.newBuffer(pool.RelayBufferSize)
+func (o ReadWaitOptions) NewBuffer() *buf.Buffer {
+	return o.newBuffer(buf.BufferSize)
 }
 
-func (o ReadWaitOptions) NewPacketBuffer() *pool.Buffer {
-	return o.newBuffer(pool.UDPBufferSize)
+func (o ReadWaitOptions) NewPacketBuffer() *buf.Buffer {
+	return o.newBuffer(buf.UDPBufferSize)
 }
 
-func (o ReadWaitOptions) newBuffer(defaultBufferSize int) *pool.Buffer {
+func (o ReadWaitOptions) newBuffer(defaultBufferSize int) *buf.Buffer {
 	var bufferSize int
 	if o.MTU > 0 {
 		bufferSize = o.MTU + o.FrontHeadroom + o.RearHeadroom
 	} else {
 		bufferSize = defaultBufferSize
 	}
-	buffer := pool.NewSize(bufferSize)
+	buffer := buf.NewSize(bufferSize)
 	if o.FrontHeadroom > 0 {
 		buffer.Resize(o.FrontHeadroom, 0)
 	}
@@ -44,7 +44,7 @@ func (o ReadWaitOptions) newBuffer(defaultBufferSize int) *pool.Buffer {
 	return buffer
 }
 
-func (o ReadWaitOptions) PostReturn(buffer *pool.Buffer) {
+func (o ReadWaitOptions) PostReturn(buffer *buf.Buffer) {
 	if o.RearHeadroom > 0 {
 		buffer.OverCap(o.RearHeadroom)
 	}
@@ -52,7 +52,7 @@ func (o ReadWaitOptions) PostReturn(buffer *pool.Buffer) {
 
 type ReadWaiter interface {
 	ReadWaitable
-	WaitReadBuffer() (buffer *pool.Buffer, err error)
+	WaitReadBuffer() (buffer *buf.Buffer, err error)
 }
 
 type ReadWaitCreator interface {
@@ -61,7 +61,7 @@ type ReadWaitCreator interface {
 
 type PacketReadWaiter interface {
 	ReadWaitable
-	WaitReadPacket() (buffer *pool.Buffer, destination M.Socksaddr, err error)
+	WaitReadPacket() (buffer *buf.Buffer, destination M.Socksaddr, err error)
 }
 
 type PacketReadWaitCreator interface {

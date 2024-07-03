@@ -3,22 +3,13 @@ package errors
 import (
 	"context"
 	"errors"
+	"io"
+	"net"
+	"os"
+	"syscall"
 
 	"github.com/lumavpn/luma/util"
 )
-
-type causeError struct {
-	message string
-	cause   error
-}
-
-func (e *causeError) Error() string {
-	return e.message + ": " + e.cause.Error()
-}
-
-func (e *causeError) Unwrap() error {
-	return e.cause
-}
 
 type ErrorHandler interface {
 	NewError(ctx context.Context, err error)
@@ -37,4 +28,23 @@ func Cause(cause error, message ...any) error {
 		panic("cause on an nil error")
 	}
 	return &causeError{util.ToString(message...), cause}
+}
+
+func Extend(cause error, message ...any) error {
+	if cause == nil {
+		panic("extend on an nil error")
+	}
+	return &extendedError{util.ToString(message...), cause}
+}
+
+func IsClosedOrCanceled(err error) bool {
+	return IsMulti(err, io.EOF, net.ErrClosed, io.ErrClosedPipe, os.ErrClosed, syscall.EPIPE, syscall.ECONNRESET, context.Canceled, context.DeadlineExceeded)
+}
+
+func IsClosed(err error) bool {
+	return IsMulti(err, io.EOF, net.ErrClosed, io.ErrClosedPipe, os.ErrClosed, syscall.EPIPE, syscall.ECONNRESET)
+}
+
+func IsCanceled(err error) bool {
+	return IsMulti(err, context.Canceled, context.DeadlineExceeded)
 }

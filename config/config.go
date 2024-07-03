@@ -1,132 +1,270 @@
 package config
 
 import (
-	"errors"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/netip"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	C "github.com/lumavpn/luma/common"
+	"github.com/lumavpn/luma/geodata"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/stack"
+	"github.com/lumavpn/luma/util"
 	"gopkg.in/yaml.v3"
 )
 
-// Config is the Luma config manager
+type Inbound struct {
+	LanAllowedIPs    []netip.Prefix `json:"lan-allowed-ips" yaml:"lan-allowed-ips"`
+	LanDisAllowedIPs []netip.Prefix `json:"lan-disallowed-ips" yaml:"lan-disallowed-ips"`
+	AllowLan         bool           `json:"allow-lan" yaml:"allow-lan"`
+	BindAddress      string         `json:"bind-address" yaml:"bind-address"`
+	SkipAuthPrefixes []netip.Prefix `json:"skip-auth-prefixes"`
+	Port             int            `yaml:"port" json:"port"`
+	SocksPort        int            `yaml:"socks-port" json:"socks-port"`
+	RedirPort        int            `yaml:"redir-port" json:"redir-port"`
+	TProxyPort       int            `yaml:"tproxy-port" json:"tproxy-port"`
+	MixedPort        int            `yaml:"mixed-port" json:"mixed-port"`
+	InboundTfo       bool           `json:"inbound-tfo"`
+	InboundMPTCP     bool           `json:"inbound-mptcp"`
+}
+
+type GeoConfig struct {
+	GeoAutoUpdate     bool   `yaml:"geo-auto-update" json:"geo-auto-update"`
+	GeoUpdateInterval int    `yaml:"geo-update-interval" json:"geo-update-interval"`
+	GeodataMode       bool   `yaml:"geodata-mode" json:"geodata-mode"`
+	GeodataLoader     string `yaml:"geodata-loader" json:"geodata-loader"`
+	GeositeMatcher    string `yaml:"geosite-matcher" json:"geosite-matcher"`
+}
+
+type GeoXUrl struct {
+	GeoIp   string `yaml:"geoip" json:"geoip"`
+	Mmdb    string `yaml:"mmdb" json:"mmdb"`
+	ASN     string `yaml:"asn" json:"asn"`
+	GeoSite string `yaml:"geosite" json:"geosite"`
+}
+
+type General struct {
+	Inbound       `yaml:",inline"`
+	GeoConfig     `yaml:",inline"`
+	GeoXUrl       *GeoXUrl `yaml:"geox-url"`
+	LogLevel      string   `yaml:"log-level"`
+	GlobalUA      string   `yaml:"global-ua"`
+	IPv6          bool     `json:"ipv6" yaml:"ipv6"`
+	TCPConcurrent bool     `yaml:"tcp-concurrent" json:"tcp-concurrent"`
+}
+
+// Config represents the options available for configuring an instance of Luma
 type Config struct {
-	// General configuration
 	General `yaml:",inline"`
 
-	Mode C.TunnelMode `yaml:"mode"`
+	// Use this device [driver://]name
+	Device string `json:"device,omitempty" yaml:"device"`
 
-	*Tun `yaml:"tun"`
+	Interface string       `yaml:"interface-name"`
+	Mode      C.TunnelMode `yaml:"mode"`
+	// Set firewall MARK (Linux only)
+	Mark int
+
+	Profile *Profile `yaml:"profile,omitempty"`
+
+	EnableTun2socks bool   `yaml:"enable-tun2socks"`
+	Proxy           string `yaml:"proxy"`
+
+	RawProxies []map[string]any `yaml:"proxies"`
+	//Proxies    map[string]P.Proxy `yaml:"-"`
+
+	//Listeners    map[string]IN.InboundListener `yaml:"-"`
+	RawListeners []map[string]any `yaml:"listeners"`
+
+	ProxyGroup []map[string]any `yaml:"proxy-groups"`
+
+	Rules    []string            `yaml:"rules"`
+	SubRules map[string][]string `yaml:"sub-rules"`
+
+	DNS    *DNS   `yaml:"-"`
+	RawDNS RawDNS `yaml:"dns" json:"dns"`
+
+	Hosts map[string]any `yaml:"hosts" json:"hosts"`
+
+	RawSniffer RawSniffer `yaml:"sniffer" json:"sniffer"`
+	Sniffer    *Sniffer   `yaml:"-" json:"-"`
+
+	ProxyProvider map[string]map[string]any `yaml:"proxy-providers"`
+
+	RuleProviders map[string]map[string]any `yaml:"rule-providers"`
+
+	MTU int `yaml:"mtu"`
+
+	EBpf   EBpf   `yaml:"ebpf"`
+	RawTun RawTun `yaml:"tun"`
+	Tun    *Tun   `yaml:"-"`
 }
 
-// General configuration
-type General struct {
-	Inbound  `yaml:",inline"`
-	LogLevel log.LogLevel `yaml:"log-level"`
-	IPv6     bool         `json:"ipv6" yaml:"ipv6"`
-}
-
-// Inbound configuration
-type Inbound struct {
-	SocksPort   int    `yaml:"socks-port"`
-	AllowLan    bool   `yaml:"allow-lan"`
-	BindAddress string `yaml:"bind-address"`
-}
-
-// Tun configuration
-type Tun struct {
-	Enable                   bool            `yaml:"enable" json:"enable"`
-	Device                   string          `yaml:"device" json:"device"`
-	Interface                string          `yaml:"interface" json:"interface"`
-	Stack                    stack.StackType `yaml:"stack" json:"stack"`
-	DNSHijack                []string        `yaml:"dns-hijack" json:"dns-hijack"`
-	AutoRoute                bool            `yaml:"auto-route" json:"auto-route"`
-	AutoDetectInterface      bool            `yaml:"auto-detect-interface" json:"auto-detect-interface"`
-	RedirectToTun            []string        `yaml:"-" json:"-"`
-	DisableInterfaceMonitor  bool            `yaml:"disable-interface-monitor"`
-	BuildAndroidRules        bool            `yaml:"build-android-rules"`
-	MTU                      uint32          `yaml:"mtu" json:"mtu,omitempty"`
-	GSO                      bool            `yaml:"gso" json:"gso,omitempty"`
-	GSOMaxSize               uint32          `yaml:"gso-max-size" json:"gso-max-size,omitempty"`
-	Inet4Address             []netip.Prefix  `yaml:"inet4-address" json:"inet4-address,omitempty"`
-	Inet6Address             []netip.Prefix  `yaml:"inet6-address" json:"inet6-address,omitempty"`
-	StrictRoute              bool            `yaml:"strict-route" json:"strict-route,omitempty"`
-	Inet4RouteAddress        []netip.Prefix  `yaml:"inet4-route-address" json:"inet4-route-address,omitempty"`
-	Inet6RouteAddress        []netip.Prefix  `yaml:"inet6-route-address" json:"inet6-route-address,omitempty"`
-	Inet4RouteExcludeAddress []netip.Prefix  `yaml:"inet4-route-exclude-address" json:"inet4-route-exclude-address,omitempty"`
-	Inet6RouteExcludeAddress []netip.Prefix  `yaml:"inet6-route-exclude-address" json:"inet6-route-exclude-address,omitempty"`
-	IncludeInterface         []string        `yaml:"include-interface" json:"include-interface,omitempty"`
-	ExcludeInterface         []string        `yaml:"exclude-interface" json:"exclude-interface,omitempty"`
-	IncludeUID               []uint32        `yaml:"include-uid" json:"include-uid,omitempty"`
-	IncludeUIDRange          []string        `yaml:"include-uid-range" json:"include-uid-range,omitempty"`
-	ExcludeUID               []uint32        `yaml:"exclude-uid" json:"exclude-uid,omitempty"`
-	ExcludeUIDRange          []string        `yaml:"exclude-uid-range" json:"exclude-uid-range,omitempty"`
-	IncludeAndroidUser       []int           `yaml:"include-android-user" json:"include-android-user,omitempty"`
-	IncludePackage           []string        `yaml:"include-package" json:"include-package,omitempty"`
-	ExcludePackage           []string        `yaml:"exclude-package" json:"exclude-package,omitempty"`
-	EndpointIndependentNat   bool            `yaml:"endpoint-independent-nat" json:"endpoint-independent-nat,omitempty"`
-	UDPTimeout               int64           `yaml:"udp-timeout" json:"udp-timeout,omitempty"`
-	FileDescriptor           int             `yaml:"file-descriptor" json:"file-descriptor"`
-	TableIndex               int             `yaml:"table-index" json:"table-index"`
+// Profile config
+type Profile struct {
+	StoreSelected bool `yaml:"store-selected"`
+	StoreFakeIP   bool `yaml:"store-fake-ip"`
 }
 
 // New returns a new instance of Config with default values
 func New() *Config {
-	return new(Config)
+	return &Config{
+		General: General{
+			LogLevel:      "info",
+			IPv6:          true,
+			TCPConcurrent: false,
+			Inbound: Inbound{
+				AllowLan:      false,
+				BindAddress:   "*",
+				LanAllowedIPs: []netip.Prefix{netip.MustParsePrefix("0.0.0.0/0"), netip.MustParsePrefix("::/0")},
+			},
+			GeoXUrl: &GeoXUrl{
+				Mmdb:    "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb",
+				ASN:     "https://github.com/xishang0128/geoip/releases/download/latest/GeoLite2-ASN.mmdb",
+				GeoIp:   "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat",
+				GeoSite: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat",
+			},
+		},
+		Mode:       C.Rule,
+		Hosts:      map[string]any{},
+		Rules:      []string{},
+		RawProxies: []map[string]any{},
+		Profile: &Profile{
+			StoreSelected: true,
+		},
+		RawDNS: RawDNS{
+			Enable:         false,
+			IPv6:           false,
+			UseHosts:       true,
+			UseSystemHosts: true,
+			IPv6Timeout:    100,
+			EnhancedMode:   C.DNSMapping,
+			FakeIPRange:    "198.18.0.1/16",
+			FallbackFilter: RawFallbackFilter{
+				GeoIP:     true,
+				GeoIPCode: "CN",
+				IPCIDR:    []string{},
+				GeoSite:   []string{},
+			},
+			DefaultNameserver: []string{
+				"114.114.114.114",
+				"223.5.5.5",
+				"8.8.8.8",
+				"1.0.0.1",
+			},
+			NameServer: []string{
+				"https://doh.pub/dns-query",
+				"tls://223.5.5.5:853",
+			},
+			FakeIPFilter: []string{
+				"dns.msftnsci.com",
+				"www.msftnsci.com",
+				"www.msftconnecttest.com",
+			},
+		},
+		RawSniffer: RawSniffer{
+			Enable:          false,
+			Sniffing:        []string{},
+			ForceDomain:     []string{},
+			SkipDomain:      []string{},
+			Ports:           []string{},
+			ForceDnsMapping: true,
+			ParsePureIp:     true,
+			OverrideDest:    true,
+		},
+		RawTun: RawTun{
+			Enable: false,
+			Device: "",
+			Stack:  stack.TunGVisor,
+			//DNSHijack:           []string{"0.0.0.0:53"},
+			AutoRoute:           true,
+			AutoDetectInterface: true,
+			Inet6Address:        []netip.Prefix{netip.MustParsePrefix("fdfe:dcba:9876::1/126")},
+		},
+	}
 }
 
-// SetDefaultValues updates the given configuration to use default values
-func (c *Config) SetDefaultValues() {
-	if c.Tun == nil {
-		c.Tun = new(Tun)
+func Init(configFile string, cmdConfig *Config) *Config {
+	var cfg *Config
+	if configFile != "" {
+		if !filepath.IsAbs(configFile) {
+			currentDir, _ := os.Getwd()
+			configFile = filepath.Join(currentDir, configFile)
+		}
+
+		exists, err := util.FileExists(configFile)
+		if !exists || err != nil {
+			log.Fatalf("No config file found at %s: %v", configFile, err)
+		}
+
+		cfg, err = ParseConfig(configFile)
+		if err != nil && !os.IsNotExist(err) {
+			log.Fatal(err)
+		} else if cmdConfig != nil {
+			OverrideConfig(cfg, cmdConfig)
+		}
+	} else if cmdConfig != nil {
+		cfg = cmdConfig
 	}
 
+	if cfg == nil {
+		log.Fatal("Config missing")
+	}
+
+	if err := cfg.Validate(); err != nil {
+		log.Errorf("config is invalid: %v", err)
+		os.Exit(1)
+	}
+	return cfg
 }
 
-// Init initializes a new Config from the given file and checks that it is valid
-func Init(configFile string) (*Config, error) {
-	if configFile == "" {
-		return nil, errors.New("Missing config file")
+func (c *Config) Clone() *Config {
+	b, _ := yaml.Marshal(c)
+	cc := new(Config)
+	_ = yaml.Unmarshal(b, cc)
+	return cc
+}
+
+func unmarshalConfig(cfg *Config, data []byte) (*Config, error) {
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return nil, fmt.Errorf("Failed to unmarshal config: %v", err)
 	}
-	if !filepath.IsAbs(configFile) {
-		currentDir, _ := os.Getwd()
-		configFile = filepath.Join(currentDir, configFile)
+
+	geodata.SetGeodataMode(cfg.GeodataMode)
+	geodata.SetGeoAutoUpdate(cfg.GeoAutoUpdate)
+	geodata.SetGeoUpdateInterval(cfg.GeoUpdateInterval)
+	geodata.SetLoader(cfg.GeodataLoader)
+	geodata.SetSiteMatcher(cfg.GeositeMatcher)
+	C.GeoAutoUpdate = cfg.GeoAutoUpdate
+	C.GeoUpdateInterval = cfg.GeoUpdateInterval
+	if cfg.GeoXUrl != nil {
+		C.GeoIpUrl = cfg.GeoXUrl.GeoIp
+		C.GeoSiteUrl = cfg.GeoXUrl.GeoSite
+		C.MmdbUrl = cfg.GeoXUrl.Mmdb
+		C.ASNUrl = cfg.GeoXUrl.ASN
 	}
-	cfg, err := ParseConfig(configFile)
+	C.GeodataMode = cfg.GeodataMode
+	C.UA = cfg.GlobalUA
+
+	if len(cfg.RawTun.Inet6Address) == 0 {
+		cfg.RawTun.Inet6Address = []netip.Prefix{netip.MustParsePrefix("fdfe:dcba:9876::1/126")}
+	}
+	//b, _ := json.Marshal(cfg.DNS)
+	//log.Debugf("Dns config is %s", string(b))
+	var err error
+	cfg.Sniffer, err = parseSniffer(cfg.RawSniffer)
 	if err != nil {
 		return nil, err
 	}
-	if err := cfg.Validate(); err != nil {
-		return nil, err
-	}
+
 	return cfg, nil
 }
 
-// Validate checks if the given config is valid. It returns an error otherwise
-func (c *Config) Validate() error {
-	switch c.LogLevel.String() {
-	case "debug", "info", "warn", "error":
-	default:
-		return fmt.Errorf("unsupported loglevel:%s", c.LogLevel.String())
-	}
-	return nil
-}
-
-// ParseBytes unmarshals the given bytes into a Config
-func ParseBytes(data []byte) (*Config, error) {
-	cfg := New()
-	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, err
-	}
-	return cfg, nil
-}
-
-// ParseConfig parses the config (if any) at the given path
 func ParseConfig(path string) (*Config, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -138,5 +276,58 @@ func ParseConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ParseBytes(data)
+
+	cfg := New()
+	return unmarshalConfig(cfg, data)
+}
+
+func ParseWithBytes(b []byte) (*Config, error) {
+	cfg := New()
+	return unmarshalConfig(cfg, b)
+}
+
+func OverrideConfig[T any](dst, src *T) {
+	newVal := reflect.ValueOf(src).Elem()
+	oldVal := reflect.ValueOf(dst).Elem()
+
+	for i := 0; i < newVal.NumField(); i++ {
+		srcField := newVal.Field(i)
+		dstField := oldVal.Field(i)
+
+		switch srcField.Kind() {
+		case reflect.String:
+			s := srcField.String()
+			if s != "" {
+				dstField.SetString(s)
+			}
+		case reflect.Int:
+			i := srcField.Int()
+			if i != 0 {
+				dstField.SetInt(i)
+			}
+		case reflect.Bool:
+			b := srcField.Bool()
+			if b {
+				dstField.SetBool(b)
+			}
+		}
+	}
+}
+
+func prettyprint(b []byte) ([]byte, error) {
+	var out bytes.Buffer
+	err := json.Indent(&out, b, "", "  ")
+	return out.Bytes(), err
+}
+
+func (c *Config) Validate() error {
+	switch c.LogLevel {
+	case "debug", "info", "warn", "error":
+	default:
+		return fmt.Errorf("unsupported log-level:%s, supported log-levels:[debug, info, warn, error]", c.LogLevel)
+	}
+	b, _ := json.Marshal(c)
+	b, _ = prettyprint(b)
+	log.Debugf("Config is %s", string(b))
+	return nil
 }
