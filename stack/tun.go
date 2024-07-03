@@ -6,7 +6,7 @@ import (
 	"net/netip"
 
 	"github.com/lumavpn/luma/common/ranges"
-	N "github.com/sagernet/sing/common/network"
+	N "github.com/lumavpn/luma/common/network"
 )
 
 type Handler interface {

@@ -22,6 +22,7 @@ protos:
 	go install github.com/bufbuild/buf/cmd/buf@latest
 	cd ./proto && buf generate
 	mv proto/proxies.pb.go proxy/proto
+	mv proto/rules.pb.go rule
 
 luma:
 	cd cmd/luma; \

@@ -9,9 +9,9 @@ import (
 	"unsafe"
 
 	"github.com/lumavpn/luma/common/shell"
-	"github.com/sagernet/sing/common/buf"
-	"github.com/sagernet/sing/common/bufio"
-	N "github.com/sagernet/sing/common/network"
+	"github.com/lumavpn/luma/common/buf"
+	"github.com/lumavpn/luma/common/bufio"
+	N "github.com/lumavpn/luma/common/network"
 
 	"golang.org/x/net/route"
 	"golang.org/x/sys/unix"

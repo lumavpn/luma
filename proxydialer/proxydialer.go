@@ -1,24 +1,185 @@
 package proxydialer
 
-import "github.com/lumavpn/luma/proxy"
+import (
+	"context"
+	"errors"
+	"fmt"
+	"math/rand"
+	"sync"
 
-// ProxyDialer is the primary mechanism for dialing proxies that Luma is configured to use
-type ProxyDialer interface {
-	AddProxies(map[string]proxy.Proxy) error
-}
+	"github.com/lumavpn/luma/component/resolver"
+	"github.com/lumavpn/luma/log"
+	"github.com/lumavpn/luma/metadata"
+	"github.com/lumavpn/luma/proxy"
+	"github.com/lumavpn/luma/proxy/proto"
+	"github.com/lumavpn/luma/proxy/provider"
+	"github.com/lumavpn/luma/rule"
+)
 
 type proxyDialer struct {
-	proxies map[string]proxy.Proxy
+	providers map[string]provider.ProxyProvider
+	proxies   map[string]proxy.Proxy
+	rules     []rule.Rule
+	subRules  map[string][]rule.Rule
+	mu        *sync.RWMutex
 }
 
-// New creates a new instance of ProxyDialer
+type ProxyDialer interface {
+	Match(m *metadata.Metadata) (proxy.Proxy, rule.Rule, error)
+	Proxies() map[string]proxy.Proxy
+	SelectProxy(*metadata.Metadata) (proxy.Proxy, error)
+	SelectProxyByName(string) (proxy.Proxy, error)
+	SetProxies(map[string]proxy.Proxy)
+	SetRules([]rule.Rule)
+	UpdateProxies(map[string]proxy.Proxy, map[string]provider.ProxyProvider)
+	UpdateRules([]rule.Rule)
+}
+
 func New() ProxyDialer {
 	return &proxyDialer{
+		mu:      new(sync.RWMutex),
 		proxies: make(map[string]proxy.Proxy),
 	}
 }
 
-// AddProxies adds the proxies to include when dialing connections
-func (pd *proxyDialer) AddProxies(proxies map[string]proxy.Proxy) error {
-	return nil
+func (pd *proxyDialer) SetProxies(proxies map[string]proxy.Proxy) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+	pd.proxies = proxies
+}
+
+func (pd *proxyDialer) SetRules(rules []rule.Rule) {
+	pd.mu.Lock()
+	defer pd.mu.Unlock()
+	pd.rules = rules
+}
+
+func (pd *proxyDialer) getRules(m *metadata.Metadata) []rule.Rule {
+	if sr, ok := pd.subRules[m.SpecialRules]; ok {
+		log.Debugf("[Rule] use %s rules", m.SpecialRules)
+		return sr
+	} else {
+		log.Debug("[Rule] use default rules")
+		return pd.rules
+	}
+}
+
+// Proxies return all proxies
+func (pd *proxyDialer) Proxies() map[string]proxy.Proxy {
+	pd.mu.RLock()
+	defer pd.mu.RUnlock()
+	return pd.proxies
+}
+
+func shouldResolveIP(rule rule.Rule, m *metadata.Metadata) bool {
+	return rule.ShouldResolveIP() && m.Host != "" && !m.DstIP.IsValid()
+}
+
+func (pd *proxyDialer) Match(m *metadata.Metadata) (proxy.Proxy, rule.Rule, error) {
+	pd.mu.RLock()
+	defer pd.mu.RUnlock()
+	var (
+		resolved bool
+	)
+
+	if node, ok := resolver.DefaultHosts.Search(m.Host, false); ok {
+		m.DstIP, _ = node.RandIP()
+		resolved = true
+	}
+	for _, rule := range pd.getRules(m) {
+		if !resolved && shouldResolveIP(rule, m) {
+			ctx, cancel := context.WithTimeout(context.Background(), resolver.DefaultDNSTimeout)
+			defer cancel()
+			ip, err := resolver.ResolveIP(ctx, m.Host)
+			if err != nil {
+				log.Debugf("[DNS] resolve %s error: %s", m.Host, err.Error())
+			} else {
+				log.Debugf("[DNS] %s --> %s", m.Host, ip.String())
+				m.DstIP = ip
+			}
+			resolved = true
+		}
+
+		if matched, ada := rule.Match(m); matched {
+			adapter, ok := pd.proxies[ada]
+			if !ok {
+				continue
+			}
+			passed := false
+			for adapter := adapter; adapter != nil; adapter = adapter.Unwrap(m, false) {
+				if adapter.Proto() == proto.Proto_Pass {
+					passed = true
+					break
+				}
+			}
+			if passed {
+				log.Debugf("%s match Pass rule", adapter.Name())
+				continue
+			}
+
+			if m.Network == metadata.UDP && !adapter.SupportUDP() {
+				log.Debugf("%s UDP is not supported", adapter.Name())
+				continue
+			}
+		}
+
+	}
+
+	return pd.proxies["DIRECT"], nil, nil
+}
+
+func (pd *proxyDialer) SelectProxy(m *metadata.Metadata) (proxy.Proxy, error) {
+	pd.mu.RLock()
+	defer pd.mu.RUnlock()
+	proxiesMap := pd.proxies
+
+	var proxies []proxy.Proxy
+	for _, proxy := range proxiesMap {
+		if m.Network == metadata.UDP && !proxy.SupportUDP() {
+			continue
+		}
+		// filter direct
+		if proxy.Proto() == proto.Proto_Direct ||
+			proxy.Proto() == proto.Proto_Reject {
+			continue
+		}
+		// filter global
+		if proxy.Name() == "GLOBAL" {
+			continue
+		}
+		proxies = append(proxies, proxy)
+	}
+	if len(proxies) == 0 {
+		return nil, errors.New("No proxies available")
+	}
+	return proxies[rand.Intn(len(proxies))], nil
+}
+
+func (pd *proxyDialer) SelectProxyByName(name string) (proxy.Proxy, error) {
+	pd.mu.RLock()
+	proxies := pd.proxies
+	pd.mu.RUnlock()
+	if proxy, ok := proxies[name]; ok {
+		return proxy, nil
+	}
+	return nil, fmt.Errorf("proxy %s not found", name)
+}
+
+// UpdateProxies handle update proxies
+func (pd *proxyDialer) UpdateProxies(newProxies map[string]proxy.Proxy, newProviders map[string]provider.ProxyProvider) {
+	if len(newProxies) == 0 {
+		return
+	}
+	log.Debugf("Re-configuring dialer with %d new proxies", len(newProxies))
+	pd.mu.Lock()
+	pd.proxies = newProxies
+	pd.providers = newProviders
+	pd.mu.Unlock()
+}
+
+// UpdateRules handle update rules
+func (pd *proxyDialer) UpdateRules(newRules []rule.Rule) {
+	pd.mu.Lock()
+	pd.rules = newRules
+	pd.mu.Unlock()
 }

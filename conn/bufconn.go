@@ -4,9 +4,9 @@ import (
 	"bufio"
 	"net"
 
-	"github.com/sagernet/sing/common/buf"
-	bbufio "github.com/sagernet/sing/common/bufio"
-	"github.com/sagernet/sing/common/network"
+	"github.com/lumavpn/luma/common/buf"
+	bbufio "github.com/lumavpn/luma/common/bufio"
+	"github.com/lumavpn/luma/common/network"
 )
 
 type BufferedConn struct {

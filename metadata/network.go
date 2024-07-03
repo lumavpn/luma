@@ -10,12 +10,15 @@ import (
 const (
 	TCP Network = iota
 	UDP
+	ALLNet
+	InvalidNet = 0xff
 )
 
 // NetworkMapping is a mapping for the Network enum
 var NetworkMapping = map[string]Network{
-	TCP.String(): TCP,
-	UDP.String(): UDP,
+	TCP.String():    TCP,
+	UDP.String():    UDP,
+	ALLNet.String(): ALLNet,
 }
 
 type Network uint8
@@ -33,8 +36,10 @@ func (n Network) String() string {
 		return "tcp"
 	case UDP:
 		return "udp"
+	case ALLNet:
+		return "all"
 	default:
-		return fmt.Sprintf("network(%d)", n)
+		return "invalid"
 	}
 }
 

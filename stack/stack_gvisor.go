@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/lumavpn/luma/log"
-	"github.com/sagernet/sing/common/bufio"
-	"github.com/sagernet/sing/common/canceler"
-	M "github.com/sagernet/sing/common/metadata"
+	"github.com/lumavpn/luma/common/bufio"
+	"github.com/lumavpn/luma/common/canceler"
+	M "github.com/lumavpn/luma/common/metadata"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"

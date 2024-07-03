@@ -1,10 +1,12 @@
 package adapter
 
 import (
+	"net"
+
 	M "github.com/lumavpn/luma/metadata"
 )
 
 type TransportHandler interface {
-	HandleTCPConn(TCPConn)
-	HandleUDPPacket(packet UDPPacket, metadata *M.Metadata)
+	HandleTCPConn(net.Conn, *M.Metadata)
+	HandleUDPPacket(UDPPacket, *M.Metadata)
 }
