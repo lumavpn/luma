@@ -13,9 +13,7 @@ import (
 	"github.com/lumavpn/luma/component/resolver"
 	"github.com/lumavpn/luma/component/slowdown"
 	"github.com/lumavpn/luma/metadata"
-	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/proto"
-	"github.com/lumavpn/luma/rule"
 )
 
 func (t *tunnel) isHandle(p proto.Proto) bool {
@@ -25,29 +23,6 @@ func (t *tunnel) isHandle(p proto.Proto) bool {
 
 func needLookupIP(metadata *metadata.Metadata) bool {
 	return resolver.MappingEnabled() && metadata.Host == "" && metadata.DstIP.IsValid()
-}
-
-func (t *tunnel) resolveMetadata(m *metadata.Metadata) (proxy.Proxy, rule.Rule, error) {
-	var err error
-	if m.SpecialProxy != "" {
-		proxy, err := t.proxyDialer.SelectProxyByName(m.SpecialProxy)
-		return proxy, nil, err
-	}
-
-	var proxy proxy.Proxy
-	mode := t.mode
-	switch mode {
-	case common.Direct:
-		proxy, err = t.proxyDialer.SelectProxyByName("DIRECT")
-	case common.Global:
-		proxy, err = t.proxyDialer.SelectProxyByName("GLOBAL")
-	case common.Select:
-		proxy, err = t.proxyDialer.SelectProxy(m)
-	default:
-		return t.proxyDialer.Match(m)
-	}
-
-	return proxy, nil, err
 }
 
 func preHandleMetadata(m *metadata.Metadata) error {

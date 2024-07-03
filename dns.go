@@ -254,7 +254,7 @@ func parseFallbackGeoSite(countries []string, rules []rule.Rule) ([]router.Domai
 			if rule.RuleType() == ruleTypes.GEOSITE {
 				if strings.EqualFold(country, rule.Payload()) {
 					found = true
-					//sites = append(sites, rule.(ruleTypes.RuleType_NETWORK).GetDomainMatcher())
+					sites = append(sites, rule.(ruleTypes.RuleGeoSite).GetDomainMatcher())
 					log.Infof("Start initial GeoSite dns fallback filter from rule `%s`", country)
 				}
 			}

@@ -1,11 +1,16 @@
 package tun
 
 import (
+	"runtime"
+
+	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/stack"
+	"github.com/breakfreesoftware/netlink"
+	"golang.org/x/sys/unix"
 )
 
 func (l *Listener) buildAndroidRules(tunOptions *stack.Options) error {
-	/*packageManager, err := stack.NewPackageManager(l.handler)
+	packageManager, err := stack.NewPackageManager(l.handler)
 	if err != nil {
 		return err
 	}
@@ -14,7 +19,7 @@ func (l *Listener) buildAndroidRules(tunOptions *stack.Options) error {
 		return err
 	}
 	l.packageManager = packageManager
-	tunOptions.BuildAndroidRules(packageManager, l.handler)*/
+	tunOptions.BuildAndroidRules(packageManager, l.handler)
 	return nil
 }
 
@@ -23,7 +28,7 @@ func (h *ListenerHandler) OnPackagesUpdated(packages int, sharedUsers int) {
 }
 
 func (l *Listener) openAndroidHotspot(tunOptions stack.Options) {
-	/*if runtime.GOOS == "android" && tunOptions.AutoRoute {
+	if runtime.GOOS == "android" && tunOptions.AutoRoute {
 		priority := 9000
 		if len(tunOptions.ExcludedRanges()) > 0 {
 			priority++
@@ -41,5 +46,5 @@ func (l *Listener) openAndroidHotspot(tunOptions stack.Options) {
 		if err != nil {
 			log.Warn("[TUN] add AndroidHotspot rule error")
 		}
-	}*/
+	}
 }

@@ -2,18 +2,22 @@ package mux
 
 import (
 	"context"
-	"errors"
 	"net"
+	"net/netip"
 	"sync"
 	"time"
 
 	"github.com/lumavpn/luma/adapter"
 	"github.com/lumavpn/luma/common/buf"
 	"github.com/lumavpn/luma/common/bufio"
-	"github.com/lumavpn/luma/common/metadata"
+	"github.com/lumavpn/luma/common/bufio/deadline"
+	"github.com/lumavpn/luma/common/errors"
+	M "github.com/lumavpn/luma/common/metadata"
+	N "github.com/lumavpn/luma/common/net"
 	"github.com/lumavpn/luma/common/network"
+	"github.com/lumavpn/luma/common/uot"
 	"github.com/lumavpn/luma/log"
-	M "github.com/lumavpn/luma/metadata"
+	C "github.com/lumavpn/luma/metadata"
 	smux "github.com/lumavpn/luma/mux"
 	"github.com/lumavpn/luma/proxy/inbound"
 	"github.com/lumavpn/luma/proxy/proto"
@@ -22,15 +26,10 @@ import (
 
 const UDPTimeout = 5 * time.Minute
 
-type Listener struct {
-	Options
-	muxService *smux.Service
-}
-
-type Options struct {
+type ListenerConfig struct {
 	Tunnel     adapter.TransportHandler
 	Type       proto.Proto
-	Additions  []inbound.Option
+	Additions  []inbound.Addition
 	UDPTimeout time.Duration
 	MuxOption  MuxOption
 }
@@ -46,67 +45,87 @@ type BrutalOptions struct {
 	Down    string `yaml:"down" json:"down,omitempty"`
 }
 
-func NewListener(opts Options) (*Listener, error) {
-	h := &Listener{Options: opts}
-	var err error
+type ListenerHandler struct {
+	ListenerConfig
+	muxService *smux.Service
+}
+
+func UpstreamMetadata(metadata M.Metadata) M.Metadata {
+	return M.Metadata{
+		Source:      metadata.Source,
+		Destination: metadata.Destination,
+	}
+}
+
+func NewListenerHandler(lc ListenerConfig) (h *ListenerHandler, err error) {
+	h = &ListenerHandler{ListenerConfig: lc}
 	h.muxService, err = smux.NewService(smux.ServiceOptions{
 		NewStreamContext: func(ctx context.Context, conn net.Conn) context.Context {
 			return ctx
 		},
 		Handler: h,
-		Padding: opts.MuxOption.Padding,
+		Padding: lc.MuxOption.Padding,
 		Brutal: smux.BrutalOptions{
-			Enabled:    opts.MuxOption.Brutal.Enabled,
-			SendBPS:    util.StringToBps(opts.MuxOption.Brutal.Up),
-			ReceiveBPS: util.StringToBps(opts.MuxOption.Brutal.Down),
+			Enabled:    lc.MuxOption.Brutal.Enabled,
+			SendBPS:    util.StringToBps(lc.MuxOption.Brutal.Up),
+			ReceiveBPS: util.StringToBps(lc.MuxOption.Brutal.Down),
 		},
 	})
-	return h, err
+	return
 }
 
-func UpstreamMetadata(m metadata.Metadata) metadata.Metadata {
-	return metadata.Metadata{
-		Source:      m.Source,
-		Destination: m.Destination,
-	}
-}
-
-func (h *Listener) IsSpecialFqdn(fqdn string) bool {
+func (h *ListenerHandler) IsSpecialFqdn(fqdn string) bool {
 	switch fqdn {
-	case smux.Destination.Fqdn:
+	case smux.Destination.Fqdn,
+		uot.MagicAddress,
+		uot.LegacyMagicAddress:
 		return true
 	default:
 		return false
 	}
 }
 
-func (h *Listener) ParseSpecialFqdn(ctx context.Context, conn net.Conn, metadata metadata.Metadata) error {
+func (h *ListenerHandler) ParseSpecialFqdn(ctx context.Context, conn net.Conn, metadata M.Metadata) error {
 	switch metadata.Destination.Fqdn {
 	case smux.Destination.Fqdn:
 		return h.muxService.NewConnection(ctx, conn, UpstreamMetadata(metadata))
+	case uot.MagicAddress:
+		request, err := uot.ReadRequest(conn)
+		if err != nil {
+			return errors.Cause(err, "read UoT request")
+		}
+		metadata.Destination = request.Destination
+		return h.NewPacketConnection(ctx, uot.NewConn(conn, *request), metadata)
+	case uot.LegacyMagicAddress:
+		metadata.Destination = M.Socksaddr{Addr: netip.IPv4Unspecified()}
+		return h.NewPacketConnection(ctx, uot.NewConn(conn, uot.Request{}), metadata)
 	}
 	return errors.New("not special fqdn")
 }
 
-func (h *Listener) NewConnection(ctx context.Context, conn net.Conn, metadata metadata.Metadata) error {
+func (h *ListenerHandler) NewConnection(ctx context.Context, conn net.Conn, metadata M.Metadata) error {
 	log.Debug("NewConnection called")
 	if h.IsSpecialFqdn(metadata.Destination.Fqdn) {
 		return h.ParseSpecialFqdn(ctx, conn, metadata)
 	}
 
-	cMetadata := &M.Metadata{
-		Network: M.TCP,
+	if deadline.NeedAdditionalReadDeadline(conn) {
+		conn = N.NewDeadlineConn(conn) // conn from sing should check NeedAdditionalReadDeadline
+	}
+
+	cMetadata := &C.Metadata{
+		Network: C.TCP,
 		Type:    h.Type,
 	}
-	inbound.WithOptions(cMetadata, inbound.WithDstAddr(metadata.Destination), inbound.WithSrcAddr(metadata.Source), inbound.WithInAddr(conn.LocalAddr()))
-	inbound.WithOptions(cMetadata, getAdditions(ctx)...)
-	inbound.WithOptions(cMetadata, h.Additions...)
+	inbound.ApplyAdditions(cMetadata, inbound.WithDstAddr(metadata.Destination), inbound.WithSrcAddr(metadata.Source), inbound.WithInAddr(conn.LocalAddr()))
+	inbound.ApplyAdditions(cMetadata, getAdditions(ctx)...)
+	inbound.ApplyAdditions(cMetadata, h.Additions...)
 
-	h.Tunnel.HandleTCPConn(conn, cMetadata)
+	h.Tunnel.HandleTCPConn(conn, cMetadata) // this goroutine must exit after conn unused
 	return nil
 }
 
-func (h *Listener) NewPacketConnection(ctx context.Context, conn network.PacketConn, m metadata.Metadata) error {
+func (h *ListenerHandler) NewPacketConnection(ctx context.Context, conn network.PacketConn, metadata M.Metadata) error {
 	defer func() { _ = conn.Close() }()
 	log.Debug("NewPacketConnection called")
 	mutex := sync.Mutex{}
@@ -124,7 +143,7 @@ func (h *Listener) NewPacketConnection(ctx context.Context, conn network.PacketC
 	for {
 		var (
 			buff *buf.Buffer
-			dest metadata.Socksaddr
+			dest M.Socksaddr
 			err  error
 		)
 		if isReadWaiter {
@@ -146,23 +165,85 @@ func (h *Listener) NewPacketConnection(ctx context.Context, conn network.PacketC
 		cPacket := &packet{
 			conn:  &conn2,
 			mutex: &mutex,
-			rAddr: m.Source.UDPAddr(),
+			rAddr: metadata.Source.UDPAddr(),
 			lAddr: conn.LocalAddr(),
 			buff:  buff,
 		}
 
-		cMetadata := &M.Metadata{
-			Network: M.UDP,
+		cMetadata := &C.Metadata{
+			Network: C.UDP,
 			Type:    h.Type,
 		}
-		inbound.WithOptions(cMetadata, inbound.WithDstAddr(dest), inbound.WithSrcAddr(m.Source), inbound.WithInAddr(conn.LocalAddr()))
-		inbound.WithOptions(cMetadata, getAdditions(ctx)...)
-		inbound.WithOptions(cMetadata, h.Additions...)
+		inbound.ApplyAdditions(cMetadata, inbound.WithDstAddr(dest), inbound.WithSrcAddr(metadata.Source), inbound.WithInAddr(conn.LocalAddr()))
+		inbound.ApplyAdditions(cMetadata, getAdditions(ctx)...)
+		inbound.ApplyAdditions(cMetadata, h.Additions...)
 		h.Tunnel.HandleUDPPacket(cPacket, cMetadata)
 	}
 	return nil
 }
 
-func (h *Listener) NewError(ctx context.Context, err error) {
+func (h *ListenerHandler) NewError(ctx context.Context, err error) {
 	log.Warnf("%s listener get error: %+v", h.Type.String(), err)
+}
+
+func ShouldIgnorePacketError(err error) bool {
+	// ignore simple error
+	if errors.IsTimeout(err) || errors.IsClosed(err) || errors.IsCanceled(err) {
+		return true
+	}
+	return false
+}
+
+type packet struct {
+	conn  *network.NetPacketConn
+	mutex *sync.Mutex
+	rAddr net.Addr
+	lAddr net.Addr
+	buff  *buf.Buffer
+}
+
+func (c *packet) Data() []byte {
+	return c.buff.Bytes()
+}
+
+// WriteBack wirtes UDP packet with source(ip, port) = `addr`
+func (c *packet) WriteBack(b []byte, addr net.Addr) (n int, err error) {
+	if addr == nil {
+		err = errors.New("address is invalid")
+		return
+	}
+
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	conn := *c.conn
+	if conn == nil {
+		err = errors.New("writeBack to closed connection")
+		return
+	}
+
+	buff := buf.NewPacket()
+	defer buff.Release()
+	n, err = buff.Write(b)
+	if err != nil {
+		return
+	}
+
+	err = conn.WritePacket(buff, M.SocksaddrFromNet(addr))
+	if err != nil {
+		return
+	}
+	return
+}
+
+// LocalAddr returns the source IP/Port of UDP Packet
+func (c *packet) LocalAddr() net.Addr {
+	return c.rAddr
+}
+
+func (c *packet) Drop() {
+	c.buff.Release()
+}
+
+func (c *packet) InAddr() net.Addr {
+	return c.lAddr
 }

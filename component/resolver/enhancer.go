@@ -1,8 +1,6 @@
 package resolver
 
-import (
-	"net/netip"
-)
+import "net/netip"
 
 var DefaultHostMapper Enhancer
 
@@ -70,4 +68,17 @@ func FindHostByIP(ip netip.Addr) (string, bool) {
 	}
 
 	return "", false
+}
+
+func FlushFakeIP() error {
+	if mapper := DefaultHostMapper; mapper != nil {
+		return mapper.FlushFakeIP()
+	}
+	return nil
+}
+
+func StoreFakePoolState() {
+	if mapper := DefaultHostMapper; mapper != nil {
+		mapper.StoreFakePoolState()
+	}
 }

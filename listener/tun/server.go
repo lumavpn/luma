@@ -21,6 +21,7 @@ import (
 	"github.com/lumavpn/luma/proxy/inbound"
 	"github.com/lumavpn/luma/proxy/proto"
 	"github.com/lumavpn/luma/stack"
+	"github.com/lumavpn/luma/stack/monitor"
 	"github.com/lumavpn/luma/util"
 )
 
@@ -36,7 +37,9 @@ type Listener struct {
 	tunIf    stack.Tun
 	tunStack stack.Stack
 
-	//packageManager stack.PackageManager
+	networkUpdateMonitor    monitor.NetworkUpdateMonitor
+	defaultInterfaceMonitor monitor.DefaultInterfaceMonitor
+	packageManager          stack.PackageManager
 
 	dnsServerIp []string
 }
@@ -88,9 +91,9 @@ func checkTunName(tunName string) (ok bool) {
 	return true
 }
 
-func New(options *config.Tun, tunnel adapter.TransportHandler, additions ...inbound.Option) (l *Listener, err error) {
+func New(options *config.Tun, tunnel adapter.TransportHandler, additions ...inbound.Addition) (l *Listener, err error) {
 	if len(additions) == 0 {
-		additions = []inbound.Option{
+		additions = []inbound.Addition{
 			inbound.WithInName("DEFAULT-TUN"),
 			inbound.WithSpecialRules(""),
 		}
@@ -162,7 +165,7 @@ func New(options *config.Tun, tunnel adapter.TransportHandler, additions ...inbo
 		dnsAdds = append(dnsAdds, addrPort)
 	}
 
-	h, err := mux.NewListener(mux.Options{
+	h, err := mux.NewListenerHandler(mux.ListenerConfig{
 		Tunnel:    tunnel,
 		Type:      proto.Proto_Tun,
 		Additions: additions,
@@ -172,8 +175,8 @@ func New(options *config.Tun, tunnel adapter.TransportHandler, additions ...inbo
 	}
 
 	handler := &ListenerHandler{
-		Listener: h,
-		DnsAdds:  dnsAdds,
+		ListenerHandler: h,
+		DnsAdds:         dnsAdds,
 	}
 	l = &Listener{
 		closed:  false,
@@ -187,6 +190,38 @@ func New(options *config.Tun, tunnel adapter.TransportHandler, additions ...inbo
 			l = nil
 		}
 	}()
+	var defaultInterfaceMonitor monitor.DefaultInterfaceMonitor
+	if !options.DisableInterfaceMonitor {
+		log.Debug("Creating new NetworkUpdateMonitor")
+		var networkUpdateMonitor monitor.NetworkUpdateMonitor
+		networkUpdateMonitor, err = monitor.NewNetworkUpdateMonitor()
+		if err != nil {
+			err = errors.Cause(err, "create NetworkUpdateMonitor")
+			return
+		}
+		l.networkUpdateMonitor = networkUpdateMonitor
+		log.Debug("Start NetworkUpdateMonitor")
+		err = networkUpdateMonitor.Start()
+		if err != nil {
+			err = errors.Cause(err, "start NetworkUpdateMonitor")
+			return
+		}
+
+		defaultInterfaceMonitor, err = monitor.NewDefaultInterfaceMonitor(networkUpdateMonitor, monitor.DefaultInterfaceMonitorOptions{OverrideAndroidVPN: true})
+		if err != nil {
+			err = errors.Cause(err, "create DefaultInterfaceMonitor")
+			return
+		}
+		l.defaultInterfaceMonitor = defaultInterfaceMonitor
+		defaultInterfaceMonitor.RegisterCallback(func(event int) {
+			l.FlushDefaultInterface()
+		})
+		err = defaultInterfaceMonitor.Start()
+		if err != nil {
+			err = errors.Cause(err, "start DefaultInterfaceMonitor")
+			return
+		}
+	}
 
 	tunOptions := stack.Options{
 		Name:                     tunName,
@@ -208,6 +243,7 @@ func New(options *config.Tun, tunnel adapter.TransportHandler, additions ...inbo
 		IncludePackage:           options.IncludePackage,
 		ExcludePackage:           options.ExcludePackage,
 		FileDescriptor:           options.FileDescriptor,
+		InterfaceMonitor:         defaultInterfaceMonitor,
 		TableIndex:               tableIndex,
 	}
 
@@ -269,8 +305,7 @@ func (l *Listener) FlushDefaultInterface() {
 	if l.options.AutoDetectInterface {
 		targetInterface := dialer.DefaultInterface.Load()
 		for _, destination := range []netip.Addr{netip.IPv4Unspecified(), netip.IPv6Unspecified(), netip.MustParseAddr("1.1.1.1")} {
-			//autoDetectInterfaceName := l.defaultInterfaceMonitor.DefaultInterfaceName(destination)
-			autoDetectInterfaceName := ""
+			autoDetectInterfaceName := l.defaultInterfaceMonitor.DefaultInterfaceName(destination)
 			if autoDetectInterfaceName == l.tunName {
 				log.Warnf("[TUN] Auto detect interface by %s get same name with tun", destination.String())
 			} else if autoDetectInterfaceName == "" || autoDetectInterfaceName == "<nil>" {
@@ -327,8 +362,9 @@ func (l *Listener) Close() error {
 	return util.Close(
 		l.tunStack,
 		l.tunIf,
-		//l.defaultInterfaceMonitor,
-		//l.networkUpdateMonitor,
+		l.defaultInterfaceMonitor,
+		l.networkUpdateMonitor,
+		l.packageManager,
 	)
 }
 

@@ -32,6 +32,7 @@ type Tunnel interface {
 	adapter.TransportHandler
 	FakeIPRange() netip.Prefix
 	Mode() C.TunnelMode
+	NatTable() nat.NatTable
 	OnSuspend()
 	OnInnerLoading()
 	OnRunning()
@@ -56,6 +57,10 @@ func New(proxyDialer proxydialer.ProxyDialer) Tunnel {
 // Mode return current mode
 func (t *tunnel) Mode() C.TunnelMode {
 	return t.mode
+}
+
+func (t *tunnel) NatTable() nat.NatTable {
+	return t.natTable
 }
 
 // SetMode change the mode of tunnel

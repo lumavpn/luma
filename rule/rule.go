@@ -1,7 +1,7 @@
 package rule
 
 import (
-	"github.com/lumavpn/luma/metadata"
+	M "github.com/lumavpn/luma/metadata"
 )
 
 // Rule Type
@@ -108,10 +108,10 @@ func (rt RuleType) String() string {
 }
 
 type Rule interface {
-	Match(*metadata.Metadata) (bool, string)
+	RuleType() RuleType
+	Match(metadata *M.Metadata) (bool, string)
 	Adapter() string
 	Payload() string
-	RuleType() RuleType
 	ShouldResolveIP() bool
 	ShouldFindProcess() bool
 }

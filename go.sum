@@ -211,6 +211,8 @@ gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C
 gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
+gvisor.dev/gvisor v0.0.0-20240517170804-b75aeeae9582 h1:9CUIRo+/Vo17rz6PW5AtJdHWBOHjlBkJIZAlhcpNZnI=
+gvisor.dev/gvisor v0.0.0-20240517170804-b75aeeae9582/go.mod h1:sxc3Uvk/vHcd3tj7/DHVBoR5wvWT/MmRq2pj7HRJnwU=
 gvisor.dev/gvisor v0.0.0-20240702073640-6dd4ef415b04 h1:3lyHR6vDjZ5qeVAweL6EF63Ip3NU8mLBT9xPkCLSLKY=
 gvisor.dev/gvisor v0.0.0-20240702073640-6dd4ef415b04/go.mod h1:sxc3Uvk/vHcd3tj7/DHVBoR5wvWT/MmRq2pj7HRJnwU=
 gvisor.dev/gvisor v0.0.0-20240702074302-889c425c6c36 h1:lW8bPv0X58F9jWWk71dwfgtEbc0YTs78JzIuw837WWA=

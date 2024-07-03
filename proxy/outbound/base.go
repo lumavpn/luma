@@ -3,22 +3,22 @@ package outbound
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
 	C "github.com/lumavpn/luma/common"
+	E "github.com/lumavpn/luma/common/errors"
 	"github.com/lumavpn/luma/dialer"
 	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
+	P "github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/proto"
+	"github.com/lumavpn/luma/util"
 )
 
 type Base struct {
-	name string
-	// addr is the address used to connect to the proxy
-	addr string
-	// proto is the protocol of the proxy
-	proto proto.Proto
-	// udp indicates whether or not the proxy supports UDP
+	name        string
+	addr        string
+	iface       string
+	proto       proto.Proto
 	udp         bool
 	xudp        bool
 	tfo         bool
@@ -28,7 +28,6 @@ type Base struct {
 	rmark       int
 	mpTcp       bool
 	id          string
-	iface       string
 	prefer      C.DNSPrefer
 }
 
@@ -43,15 +42,6 @@ type BaseOption struct {
 	Interface   string
 	RoutingMark int
 	Prefer      C.DNSPrefer
-}
-
-type BasicOption struct {
-	TFO         bool               `proxy:"tfo,omitempty" group:"tfo,omitempty"`
-	MPTCP       bool               `proxy:"mptcp,omitempty" group:"mptcp,omitempty"`
-	Interface   string             `proxy:"interface-name,omitempty" group:"interface-name,omitempty"`
-	RoutingMark int                `proxy:"routing-mark,omitempty" group:"routing-mark,omitempty"`
-	IPVersion   string             `proxy:"ip-version,omitempty" group:"ip-version,omitempty"`
-	DialerProxy proxy.ProxyAdapter `proxy:"dialer-proxy,omitempty"`
 }
 
 func NewBase(opt BaseOption) *Base {
@@ -69,8 +59,38 @@ func NewBase(opt BaseOption) *Base {
 	}
 }
 
+type BasicOption struct {
+	TFO         bool               `proxy:"tfo,omitempty" group:"tfo,omitempty"`
+	MPTCP       bool               `proxy:"mptcp,omitempty" group:"mptcp,omitempty"`
+	Interface   string             `proxy:"interface-name,omitempty" group:"interface-name,omitempty"`
+	RoutingMark int                `proxy:"routing-mark,omitempty" group:"routing-mark,omitempty"`
+	IPVersion   string             `proxy:"ip-version,omitempty" group:"ip-version,omitempty"`
+	DialerProxy proxy.ProxyAdapter `proxy:"dialer-proxy,omitempty"` // don't apply this option into groups, but can set a group name in a proxy
+}
+
+// Id implements proxy.ProxyAdapter
+func (b *Base) Id() string {
+	if b.id == "" {
+		b.id = util.NewUUIDV6().String()
+	}
+
+	return b.id
+}
+
+// MarshalJSON implements proxy.ProxyAdapter
+func (b *Base) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]string{
+		"proto": b.Proto().String(),
+		"id":    b.Id(),
+	})
+}
+
 func (b *Base) Addr() string {
 	return b.addr
+}
+
+func (b *Base) DisableIPv6() bool {
+	return b.disableIPv6
 }
 
 func (b *Base) Name() string {
@@ -89,14 +109,6 @@ func (b *Base) Proto() proto.Proto {
 	return b.proto
 }
 
-// MarshalJSON implements proxy.ProxyAdapter
-func (b *Base) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]string{
-		"proto": b.Proto().String(),
-		"addr":  b.Addr(),
-	})
-}
-
 // Unwrap implements proxy.Proxy
 func (b *Base) Unwrap(metadata *M.Metadata, touch bool) proxy.Proxy {
 	return nil
@@ -105,11 +117,6 @@ func (b *Base) Unwrap(metadata *M.Metadata, touch bool) proxy.Proxy {
 // SupportWithDialer implements proxy.ProxyAdapter
 func (b *Base) SupportWithDialer() M.Network {
 	return M.InvalidNet
-}
-
-// IsL3Protocol implements proxy.Proxy
-func (b *Base) IsL3Protocol(metadata *M.Metadata) bool {
-	return false
 }
 
 // SupportUOT implements proxy.ProxyAdapter
@@ -132,24 +139,29 @@ func (b *Base) SupportTFO() bool {
 	return b.tfo
 }
 
+// IsL3Protocol implements proxy.Proxy
+func (b *Base) IsL3Protocol(metadata *M.Metadata) bool {
+	return false
+}
+
 // DialContext implements proxy.Proxy
-func (b *Base) DialContext(context.Context, *M.Metadata, ...dialer.Option) (proxy.Conn, error) {
-	return nil, errors.ErrUnsupported
+func (b *Base) DialContext(context.Context, *M.Metadata, ...dialer.Option) (P.Conn, error) {
+	return nil, E.ErrNotSupport
 }
 
 // DialContextWithDialer implements proxy.ProxyAdapter
-func (b *Base) DialContextWithDialer(ctx context.Context, dialer proxy.Dialer, metadata *M.Metadata) (_ proxy.Conn, err error) {
-	return nil, errors.ErrUnsupported
+func (b *Base) DialContextWithDialer(ctx context.Context, dialer P.Dialer, metadata *M.Metadata) (_ P.Conn, err error) {
+	return nil, E.ErrNotSupport
 }
 
 // ListenPacketContext implements proxy.ProxyAdapter
-func (b *Base) ListenPacketContext(context.Context, *M.Metadata, ...dialer.Option) (proxy.PacketConn, error) {
-	return nil, errors.ErrUnsupported
+func (b *Base) ListenPacketContext(context.Context, *M.Metadata, ...dialer.Option) (P.PacketConn, error) {
+	return nil, E.ErrNotSupport
 }
 
 // ListenPacketWithDialer implements proxy.ProxyAdapter
-func (b *Base) ListenPacketWithDialer(ctx context.Context, dialer proxy.Dialer, metadata *M.Metadata) (_ proxy.PacketConn, err error) {
-	return nil, errors.ErrUnsupported
+func (b *Base) ListenPacketWithDialer(ctx context.Context, dialer P.Dialer, metadata *M.Metadata) (_ P.PacketConn, err error) {
+	return nil, E.ErrNotSupport
 }
 
 // DialOptions return []dialer.Option from struct
@@ -157,9 +169,27 @@ func (b *Base) DialOptions(opts ...dialer.Option) []dialer.Option {
 	if b.iface != "" {
 		opts = append(opts, dialer.WithInterface(b.iface))
 	}
-
 	if b.rmark != 0 {
 		opts = append(opts, dialer.WithRoutingMark(b.rmark))
+	}
+
+	switch b.prefer {
+	case C.IPv4Only:
+		opts = append(opts, dialer.WithOnlySingleStack(true))
+	case C.IPv6Only:
+		opts = append(opts, dialer.WithOnlySingleStack(false))
+	case C.IPv4Prefer:
+		opts = append(opts, dialer.WithPreferIPv4())
+	case C.IPv6Prefer:
+		opts = append(opts, dialer.WithPreferIPv6())
+	default:
+	}
+	if b.tfo {
+		opts = append(opts, dialer.WithTFO(true))
+	}
+
+	if b.mpTcp {
+		opts = append(opts, dialer.WithMPTCP(true))
 	}
 
 	return opts

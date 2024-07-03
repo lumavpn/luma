@@ -31,7 +31,7 @@ require (
 	golang.org/x/text v0.16.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/yaml.v3 v3.0.1
-	gvisor.dev/gvisor v0.0.0-20240702074302-889c425c6c36
+	gvisor.dev/gvisor v0.0.0-20240517170804-b75aeeae9582
 )
 
 replace github.com/quic-go/quic-go => github.com/breakfreesoftware/quic-go v0.44.1-0.20240521232755-9c6a83c17044

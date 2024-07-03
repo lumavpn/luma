@@ -51,8 +51,7 @@ func main() {
 	ctx := context.Background()
 
 	cfg := config.Init(configFile, cmdConfig)
-	lu, err := luma.New(cfg)
-	checkErr(err)
+	lu := luma.New(cfg)
 	Start(ctx, lu)
 
 	defer lu.Stop()

@@ -114,7 +114,7 @@ func (t *tunnel) handleUDPConn(packet adapter.PacketAdapter) {
 			cond.Broadcast()
 		}()
 
-		proxy, rule, err := t.resolveMetadata(metadata)
+		proxy, rule, err := t.proxyDialer.ResolveMetadata(metadata)
 		if err != nil {
 			log.Warnf("[UDP] Parse metadata failed: %s", err.Error())
 			return

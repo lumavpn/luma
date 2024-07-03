@@ -43,7 +43,7 @@ func (c *conn) ReaderReplaceable() bool {
 	return true
 }
 
-func NewConn(c net.Conn, a proxy.ProxyAdapter) proxy.Conn {
+func NewConn(c net.Conn, a proxy.ProxyAdapter) C.Conn {
 	if _, ok := c.(syscall.Conn); !ok { // exclusion system conn like *net.TCPConn
 		c = N.NewDeadlineConn(c) // most conn from outbound can't handle readDeadline correctly
 	}

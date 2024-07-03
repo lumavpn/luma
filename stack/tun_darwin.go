@@ -8,10 +8,11 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/lumavpn/luma/common/shell"
 	"github.com/lumavpn/luma/common/buf"
 	"github.com/lumavpn/luma/common/bufio"
+	"github.com/lumavpn/luma/common/errors"
 	N "github.com/lumavpn/luma/common/network"
+	"github.com/lumavpn/luma/common/shell"
 
 	"golang.org/x/net/route"
 	"golang.org/x/sys/unix"
@@ -33,7 +34,7 @@ func New(options Options) (Tun, error) {
 		ifIndex := -1
 		_, err := fmt.Sscanf(options.Name, "utun%d", &ifIndex)
 		if err != nil {
-			return nil, fmt.Errorf("bad tun name: %v", options.Name)
+			return nil, errors.New("bad tun name: ", options.Name)
 		}
 
 		tunFd, err = unix.Socket(unix.AF_SYSTEM, unix.SOCK_DGRAM, 2)
@@ -247,7 +248,7 @@ func configure(tunFd int, ifIndex int, name string, options Options) error {
 				err = addRoute(routeRange, options.Inet6Address[0].Addr())
 			}
 			if err != nil {
-				return fmt.Errorf("error adding route: %v %v", err, routeRange)
+				return errors.Cause(err, "add route: ", routeRange)
 			}
 		}
 		flushDNSCache()

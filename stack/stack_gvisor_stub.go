@@ -2,7 +2,7 @@
 
 package stack
 
-import "errors"
+import "github.com/lumavpn/luma/common/errors"
 
 const WithGVisor = false
 

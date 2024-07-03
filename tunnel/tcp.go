@@ -69,7 +69,7 @@ func (t *tunnel) handleTCPConn(connCtx adapter.TCPConn) {
 		}()
 	}
 
-	proxy, rule, err := t.resolveMetadata(m)
+	proxy, rule, err := t.proxyDialer.ResolveMetadata(m)
 	if err != nil {
 		log.Warnf("[Metadata] parse failed: %s", err.Error())
 		return

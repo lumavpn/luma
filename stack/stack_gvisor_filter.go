@@ -1,3 +1,5 @@
+//go:build with_gvisor
+
 package stack
 
 import (
@@ -10,6 +12,8 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
+var _ stack.LinkEndpoint = (*LinkEndpointFilter)(nil)
+
 type LinkEndpointFilter struct {
 	stack.LinkEndpoint
 	BroadcastAddress netip.Addr
@@ -19,6 +23,8 @@ type LinkEndpointFilter struct {
 func (w *LinkEndpointFilter) Attach(dispatcher stack.NetworkDispatcher) {
 	w.LinkEndpoint.Attach(&networkDispatcherFilter{dispatcher, w.BroadcastAddress, w.Writer})
 }
+
+var _ stack.NetworkDispatcher = (*networkDispatcherFilter)(nil)
 
 type networkDispatcherFilter struct {
 	stack.NetworkDispatcher

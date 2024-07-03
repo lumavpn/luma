@@ -9,11 +9,10 @@ import (
 	"net/netip"
 	"time"
 
-	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/common/bufio"
 	"github.com/lumavpn/luma/common/canceler"
 	M "github.com/lumavpn/luma/common/metadata"
-
+	"github.com/lumavpn/luma/log"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -29,9 +28,10 @@ import (
 const defaultNIC tcpip.NICID = 1
 
 type gVisor struct {
+	ctx                    context.Context
 	config                 *Config
-	endpointIndependentNat bool
 	handler                Handler
+	endpointIndependentNat bool
 	tun                    GVisorTun
 	broadcastAddr          netip.Addr
 	udpTimeout             int64
@@ -53,11 +53,12 @@ func NewGVisor(
 	}
 	log.Debug("Creating new gVisor stack")
 	return &gVisor{
+		ctx:                    cfg.Context,
 		config:                 cfg,
 		endpointIndependentNat: cfg.EndpointIndependentNat,
 		udpTimeout:             cfg.UDPTimeout,
 		handler:                cfg.Handler,
-		broadcastAddr:          broadcastAddr(cfg.TunOptions.Inet4Address),
+		broadcastAddr:          BroadcastAddr(cfg.TunOptions.Inet4Address),
 		tun:                    gTun,
 	}, nil
 }
@@ -68,16 +69,18 @@ func (t *gVisor) Start(ctx context.Context) error {
 		return err
 	}
 	linkEndpoint = &LinkEndpointFilter{linkEndpoint, t.broadcastAddr, t.tun}
+
 	ipStack, err := newGVisorStack(linkEndpoint)
 	if err != nil {
 		return err
 	}
+
 	tcpForwarder := tcp.NewForwarder(ipStack, 0, 1024, func(r *tcp.ForwarderRequest) {
 		var wq waiter.Queue
 		handshakeCtx, cancel := context.WithCancel(context.Background())
 		go func() {
 			select {
-			case <-ctx.Done():
+			case <-t.ctx.Done():
 				wq.Notify(wq.Events())
 			case <-handshakeCtx.Done():
 			}
@@ -105,7 +108,7 @@ func (t *gVisor) Start(ctx context.Context) error {
 			var metadata M.Metadata
 			metadata.Source = M.SocksaddrFromNet(lAddr)
 			metadata.Destination = M.SocksaddrFromNet(rAddr)
-			hErr := t.handler.NewConnection(ctx, &gTCPConn{tcpConn}, metadata)
+			hErr := t.handler.NewConnection(t.ctx, &gTCPConn{tcpConn}, metadata)
 			if hErr != nil {
 				endpoint.Abort()
 			}
@@ -131,7 +134,7 @@ func (t *gVisor) Start(ctx context.Context) error {
 				var metadata M.Metadata
 				metadata.Source = M.SocksaddrFromNet(lAddr)
 				metadata.Destination = M.SocksaddrFromNet(rAddr)
-				ctx, conn := canceler.NewPacketConn(ctx, bufio.NewUnbindPacketConnWithAddr(gConn, metadata.Destination), time.Duration(t.udpTimeout)*time.Second)
+				ctx, conn := canceler.NewPacketConn(t.ctx, bufio.NewUnbindPacketConnWithAddr(gConn, metadata.Destination), time.Duration(t.udpTimeout)*time.Second)
 				hErr := t.handler.NewPacketConnection(ctx, conn, metadata)
 				if hErr != nil {
 					endpoint.Abort()
@@ -140,7 +143,7 @@ func (t *gVisor) Start(ctx context.Context) error {
 		})
 		ipStack.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
 	} else {
-		ipStack.SetTransportProtocolHandler(udp.ProtocolNumber, NewUDPForwarder(ctx, ipStack, t.handler, t.udpTimeout).HandlePacket)
+		ipStack.SetTransportProtocolHandler(udp.ProtocolNumber, NewUDPForwarder(t.ctx, ipStack, t.handler, t.udpTimeout).HandlePacket)
 	}
 
 	t.stack = ipStack

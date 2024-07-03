@@ -18,7 +18,7 @@ import (
 )
 
 type ListenerHandler struct {
-	*mux.Listener
+	*mux.ListenerHandler
 	DnsAdds []netip.AddrPort
 }
 
@@ -39,7 +39,7 @@ func (h *ListenerHandler) NewConnection(ctx context.Context, conn net.Conn, meta
 		log.Debugf("[DNS] hijack tcp:%s", metadata.Destination.String())
 		return resolver.RelayDnsConn(ctx, conn, resolver.DefaultDnsReadTimeout)
 	}
-	return h.Listener.NewConnection(ctx, conn, metadata)
+	return h.ListenerHandler.NewConnection(ctx, conn, metadata)
 }
 
 func (h *ListenerHandler) NewPacketConnection(ctx context.Context, conn network.PacketConn, metadata M.Metadata) error {
@@ -122,5 +122,5 @@ func (h *ListenerHandler) NewPacketConnection(ctx context.Context, conn network.
 		}
 		return nil
 	}
-	return h.Listener.NewPacketConnection(ctx, conn, metadata)
+	return h.ListenerHandler.NewPacketConnection(ctx, conn, metadata)
 }

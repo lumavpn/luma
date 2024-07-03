@@ -7,10 +7,12 @@ import (
 	"errors"
 	"math"
 	"net/netip"
+	"os"
 	"sync"
 	"syscall"
 
 	"github.com/lumavpn/luma/common/buf"
+	E "github.com/lumavpn/luma/common/errors"
 	M "github.com/lumavpn/luma/common/metadata"
 	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/udpnat"
@@ -21,32 +23,6 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
-
-type gUDPConn struct {
-	*gonet.UDPConn
-}
-
-func (c *gUDPConn) Read(b []byte) (n int, err error) {
-	n, err = c.UDPConn.Read(b)
-	if err == nil {
-		return
-	}
-	err = wrapError(err)
-	return
-}
-
-func (c *gUDPConn) Write(b []byte) (n int, err error) {
-	n, err = c.UDPConn.Write(b)
-	if err == nil {
-		return
-	}
-	err = wrapError(err)
-	return
-}
-
-func (c *gUDPConn) Close() error {
-	return c.UDPConn.Close()
-}
 
 type UDPForwarder struct {
 	ctx    context.Context
@@ -110,11 +86,11 @@ type UDPBackWriter struct {
 
 func (w *UDPBackWriter) WritePacket(packetBuffer *buf.Buffer, destination M.Socksaddr) error {
 	if !destination.IsIP() {
-		return errors.New("invalid destination")
+		return E.Cause(os.ErrInvalid, "invalid destination")
 	} else if destination.IsIPv4() && w.sourceNetwork == header.IPv6ProtocolNumber {
 		destination = M.SocksaddrFrom(netip.AddrFrom16(destination.Addr.As16()), destination.Port)
 	} else if destination.IsIPv6() && (w.sourceNetwork == header.IPv4ProtocolNumber) {
-		return errors.New("send IPv6 packet to IPv4 connection")
+		return E.New("send IPv6 packet to IPv4 connection")
 	}
 
 	defer packetBuffer.Release()
@@ -209,4 +185,30 @@ func gWriteUnreachable6(gStack *stack.Stack, packet *stack.PacketBuffer, icmpCod
 		return wrapStackError(err)
 	}
 	return nil
+}
+
+type gUDPConn struct {
+	*gonet.UDPConn
+}
+
+func (c *gUDPConn) Read(b []byte) (n int, err error) {
+	n, err = c.UDPConn.Read(b)
+	if err == nil {
+		return
+	}
+	err = wrapError(err)
+	return
+}
+
+func (c *gUDPConn) Write(b []byte) (n int, err error) {
+	n, err = c.UDPConn.Write(b)
+	if err == nil {
+		return
+	}
+	err = wrapError(err)
+	return
+}
+
+func (c *gUDPConn) Close() error {
+	return c.UDPConn.Close()
 }
