@@ -21,7 +21,7 @@ import (
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/stack/monitor"
 	"github.com/lumavpn/luma/util"
-	"github.com/breakfreesoftware/netlink"
+	"github.com/lumavpn/netlink"
 	"golang.org/x/sys/unix"
 )
 

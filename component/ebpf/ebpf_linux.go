@@ -11,7 +11,7 @@ import (
 	"github.com/lumavpn/luma/component/ebpf/redir"
 	"github.com/lumavpn/luma/component/ebpf/tc"
 	"github.com/lumavpn/luma/dialer"
-	"github.com/breakfreesoftware/netlink"
+	"github.com/lumavpn/netlink"
 )
 
 func GetAutoDetectInterface() (string, error) {

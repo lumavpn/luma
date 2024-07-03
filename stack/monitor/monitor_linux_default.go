@@ -3,7 +3,7 @@
 package monitor
 
 import (
-	"github.com/breakfreesoftware/netlink"
+	"github.com/lumavpn/netlink"
 
 	"golang.org/x/sys/unix"
 )

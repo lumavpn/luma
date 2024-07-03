@@ -8,7 +8,7 @@ import (
 
 	E "github.com/lumavpn/luma/common/errors"
 	"github.com/lumavpn/luma/common/generics/list"
-	"github.com/breakfreesoftware/netlink"
+	"github.com/lumavpn/netlink"
 
 	"golang.org/x/sys/unix"
 )

@@ -2,7 +2,7 @@ package monitor
 
 import (
 	"github.com/lumavpn/luma/common/errors"
-	"github.com/breakfreesoftware/netlink"
+	"github.com/lumavpn/netlink"
 )
 
 func (m *defaultInterfaceMonitor) checkUpdate() error {

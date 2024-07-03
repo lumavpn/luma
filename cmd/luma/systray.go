@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/breakfreesoftware/systray"
+	"github.com/lumavpn/systray"
 	luma "github.com/lumavpn/luma"
 	"github.com/lumavpn/luma/icon"
 	"github.com/lumavpn/luma/log"

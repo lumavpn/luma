@@ -15,7 +15,7 @@ import (
 
 	C "github.com/lumavpn/luma/common"
 	"github.com/lumavpn/luma/transport/socks5"
-	"github.com/breakfreesoftware/netlink"
+	"github.com/lumavpn/netlink"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc $BPF_CLANG -cflags $BPF_CFLAGS bpf ../bpf/tc.c
