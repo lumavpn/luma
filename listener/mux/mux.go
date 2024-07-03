@@ -8,16 +8,16 @@ import (
 	"time"
 
 	"github.com/lumavpn/luma/adapter"
+	"github.com/lumavpn/luma/common/buf"
+	"github.com/lumavpn/luma/common/bufio"
+	"github.com/lumavpn/luma/common/metadata"
+	"github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/log"
 	M "github.com/lumavpn/luma/metadata"
+	smux "github.com/lumavpn/luma/mux"
 	"github.com/lumavpn/luma/proxy/inbound"
 	"github.com/lumavpn/luma/proxy/proto"
 	"github.com/lumavpn/luma/util"
-	smux "github.com/sagernet/sing-mux"
-	"github.com/sagernet/sing/common/buf"
-	"github.com/sagernet/sing/common/bufio"
-	"github.com/sagernet/sing/common/metadata"
-	"github.com/sagernet/sing/common/network"
 )
 
 const UDPTimeout = 5 * time.Minute
@@ -102,7 +102,7 @@ func (h *Listener) NewConnection(ctx context.Context, conn net.Conn, metadata me
 	inbound.WithOptions(cMetadata, getAdditions(ctx)...)
 	inbound.WithOptions(cMetadata, h.Additions...)
 
-	h.Tunnel.HandleTCPConn(adapter.NewTCPConn(conn, cMetadata))
+	h.Tunnel.HandleTCPConn(conn, cMetadata)
 	return nil
 }
 

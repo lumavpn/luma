@@ -2,10 +2,6 @@ package util
 
 import "io"
 
-type WithUpstream interface {
-	Upstream() any
-}
-
 func Close(closers ...any) error {
 	var retErr error
 	for _, closer := range closers {

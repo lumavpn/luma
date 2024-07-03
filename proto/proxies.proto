@@ -11,4 +11,12 @@ enum Proto {
   Shadowsocks = 6;
   Relay = 7;
   Tun = 8;
+  Inner = 9;
+  Pass = 10;
+  RejectDrop = 11;
+  Compatible = 12;
+  Fallback = 13;
+  LoadBalance = 14;
+  Selector = 15;
+  URLTest = 16;
 }

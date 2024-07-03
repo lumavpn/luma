@@ -1,9 +1,7 @@
 package util
 
 import (
-	"errors"
 	"fmt"
-	"reflect"
 	"regexp"
 	"strconv"
 
@@ -62,12 +60,35 @@ func ToString(messages ...any) string {
 	return output
 }
 
+func ReverseString(s string) string {
+	a := []rune(s)
+	for i, j := 0, len(a)-1; i < j; i, j = i+1, j-1 {
+		a[i], a[j] = a[j], a[i]
+	}
+	return string(a)
+}
+
+func ToString0[T any](message T) string {
+	return ToString(message)
+}
+
+func MapToString[T any](arr []T) []string {
+	return Map(arr, ToString0[T])
+}
+
+func Seconds(seconds float64) string {
+	seconds100 := int(seconds * 100)
+	return ToString(seconds100/100, ".", seconds100%100, seconds100%10)
+}
+
 var rateStringRegexp = regexp.MustCompile(`^(\d+)\s*([KMGT]?)([Bb])ps$`)
 
 func StringToBps(s string) uint64 {
 	if s == "" {
 		return 0
 	}
+
+	// when have not unit, use Mbps
 	if v, err := strconv.Atoi(s); err == nil {
 		return StringToBps(fmt.Sprintf("%d Mbps", v))
 	}
@@ -93,32 +114,8 @@ func StringToBps(s string) uint64 {
 	v, _ := strconv.ParseUint(m[1], 10, 64)
 	n *= v
 	if m[3] == "b" {
+		// Bits, need to convert to bytes
 		n /= 8
 	}
 	return n
-}
-
-func ReverseString(s string) string {
-	a := []rune(s)
-	for i, j := 0, len(a)-1; i < j; i, j = i+1, j-1 {
-		a[i], a[j] = a[j], a[i]
-	}
-	return string(a)
-}
-
-func ToStringSlice(value any) ([]string, error) {
-	strArr := make([]string, 0)
-	switch reflect.TypeOf(value).Kind() {
-	case reflect.Slice, reflect.Array:
-		origin := reflect.ValueOf(value)
-		for i := 0; i < origin.Len(); i++ {
-			item := fmt.Sprintf("%v", origin.Index(i))
-			strArr = append(strArr, item)
-		}
-	case reflect.String:
-		strArr = append(strArr, fmt.Sprintf("%v", value))
-	default:
-		return nil, errors.New("value format error, must be string or array")
-	}
-	return strArr, nil
 }

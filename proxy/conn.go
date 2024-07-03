@@ -1,18 +1,21 @@
 package proxy
 
-import "net"
+import (
+	N "github.com/lumavpn/luma/common/network"
+)
 
 type Connection interface {
 	Chains() Chain
 	AppendToChains(adapter ProxyAdapter)
+	RemoteDestination() string
 }
 
 type Conn interface {
-	net.Conn
+	N.ExtendedConn
 	Connection
 }
 
 type PacketConn interface {
-	net.PacketConn
+	N.EnhancePacketConn
 	Connection
 }
