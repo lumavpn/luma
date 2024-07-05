@@ -1,6 +1,6 @@
 # Luma VPN
 
-This repository contains the source code for the Luma VPN app.
+This repository contains the source code for the multi-platform proxy client that powers LumaVPN. It is based on ClashMeta.
 
 Please refer to our website luma.net for additional information how the service works.
 

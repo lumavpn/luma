@@ -13,6 +13,7 @@ import (
 	"github.com/lumavpn/luma/common/errors"
 	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/shell"
+	"github.com/lumavpn/luma/log"
 
 	"golang.org/x/net/route"
 	"golang.org/x/sys/unix"
@@ -29,6 +30,7 @@ type NativeTun struct {
 }
 
 func New(options Options) (Tun, error) {
+	log.Debug("Creating new tun..")
 	var tunFd int
 	if options.FileDescriptor == 0 {
 		ifIndex := -1

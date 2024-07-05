@@ -38,6 +38,7 @@ import (
 	"github.com/lumavpn/luma/proxydialer"
 	"github.com/lumavpn/luma/rule"
 	"github.com/lumavpn/luma/stack"
+	"github.com/lumavpn/luma/sysproxy"
 	"github.com/lumavpn/luma/tunnel"
 	SNI "github.com/lumavpn/luma/tunnel/sniffer"
 )
@@ -363,6 +364,11 @@ func (lu *Luma) updateListeners(ctx context.Context, cfg *config.Config, listene
 	if err := lu.recreateMixed(cfg, tunnel); err != nil {
 		return err
 	}
+
+	if cfg.MixedPort > 0 && cfg.EnableSystemProxy {
+		return sysproxy.EnableAll(cfg.MixedPort)
+	}
+
 	return nil
 }
 

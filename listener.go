@@ -354,6 +354,7 @@ func (lu *Luma) recreateMixed(cfg *config.Config, tunnel adapter.TransportHandle
 	}
 
 	log.Infof("Mixed(http+socks) proxy listening at: %s", lu.mixedListener.Address())
+
 	return nil
 }
 

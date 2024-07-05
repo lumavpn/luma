@@ -67,6 +67,9 @@ type Config struct {
 
 	Interface string       `yaml:"interface-name"`
 	Mode      C.TunnelMode `yaml:"mode"`
+
+	EnableSystemProxy bool `yaml:"enable-system-proxy"`
+
 	// Set firewall MARK (Linux only)
 	Mark int
 

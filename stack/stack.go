@@ -8,6 +8,7 @@ import (
 	"net/netip"
 
 	"github.com/lumavpn/luma/common/control"
+	"github.com/lumavpn/luma/log"
 )
 
 type Stack interface {
@@ -30,6 +31,7 @@ type Config struct {
 
 // NewStack creates a new instance of Stack with the given options
 func NewStack(cfg *Config) (Stack, error) {
+	log.Debugf("Creating new stack %s", cfg.Stack)
 	switch cfg.Stack {
 	case TunGVisor:
 		return NewGVisor(cfg)

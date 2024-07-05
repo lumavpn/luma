@@ -53,6 +53,7 @@ type Session struct {
 }
 
 func NewSystem(options *Config) (Stack, error) {
+	log.Debug("Creating new system stack")
 	stack := &System{
 		tun:             options.Tun,
 		tunName:         options.TunOptions.Name,
