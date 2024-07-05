@@ -497,6 +497,8 @@ func (lu *Luma) updateDNS(c *config.DNS, ruleProvider map[string]provider.RulePr
 func (lu *Luma) Stop() error {
 	log.Debug("Stopping luma..")
 
+	cfg := lu.config
+
 	defer lu.SetStarted(false)
 
 	if lu.autoRedirListener != nil {
@@ -507,6 +509,11 @@ func (lu *Luma) Stop() error {
 	if lu.httpListener != nil {
 		lu.httpListener.Close()
 		lu.httpListener = nil
+	}
+
+	if lu.mixedListener != nil && cfg.EnableSystemProxy {
+		log.Debug("Disabling system proxy")
+		sysproxy.Disable()
 	}
 
 	if lu.mixedListener != nil {
