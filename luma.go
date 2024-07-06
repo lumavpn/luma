@@ -217,9 +217,6 @@ func (lu *Luma) parseConfig(cfg *config.Config) error {
 func (lu *Luma) ApplyConfig(ctx context.Context, cfg *config.Config) error {
 	log.Debug("Calling apply config")
 
-	b, _ := json.Marshal(cfg)
-	log.Debugf("Config is %s", string(b))
-
 	tunnel := lu.tunnel
 
 	tunnel.OnSuspend()
@@ -229,6 +226,9 @@ func (lu *Luma) ApplyConfig(ctx context.Context, cfg *config.Config) error {
 	if err := lu.parseConfig(cfg); err != nil {
 		return err
 	}
+
+	b, _ := json.Marshal(cfg)
+	log.Debugf("Config is %s", string(b))
 
 	lu.updateSniffer(cfg.Sniffer)
 	updateHosts(lu.hosts)
