@@ -3,6 +3,7 @@ package luma
 import (
 	"container/list"
 	"context"
+	"encoding/json"
 	"errors"
 	"runtime"
 	"sync"
@@ -215,6 +216,9 @@ func (lu *Luma) parseConfig(cfg *config.Config) error {
 
 func (lu *Luma) ApplyConfig(ctx context.Context, cfg *config.Config) error {
 	log.Debug("Calling apply config")
+
+	b, _ := json.Marshal(cfg)
+	log.Debugf("Config is %s", string(b))
 
 	tunnel := lu.tunnel
 
