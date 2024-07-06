@@ -1,6 +1,7 @@
 package log
 
 import (
+	"io"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -21,6 +22,11 @@ func init() {
 
 func SetLevel(level LogLevel) {
 	_defaultLevel.Store(uint32(level))
+}
+
+// SetOutput sets the standard logger output.
+func SetOutput(out io.Writer) {
+	logrus.SetOutput(out)
 }
 
 func Level() LogLevel {
