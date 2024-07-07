@@ -187,7 +187,7 @@ func New() *Config {
 			//DNSHijack:           []string{"0.0.0.0:53"},
 			AutoRoute:           true,
 			AutoDetectInterface: true,
-			Inet6Address:        []netip.Prefix{netip.MustParsePrefix("fdfe:dcba:9876::1/126")},
+			//Inet6Address:        []netip.Prefix{netip.MustParsePrefix("fdfe:dcba:9876::1/126")},
 		},
 	}
 }
@@ -255,7 +255,7 @@ func unmarshalConfig(cfg *Config, data []byte) (*Config, error) {
 	C.UA = cfg.GlobalUA
 
 	if len(cfg.RawTun.Inet6Address) == 0 {
-		cfg.RawTun.Inet6Address = []netip.Prefix{netip.MustParsePrefix("fdfe:dcba:9876::1/126")}
+		//cfg.RawTun.Inet6Address = []netip.Prefix{netip.MustParsePrefix("fdfe:dcba:9876::1/126")}
 	}
 	//b, _ := json.Marshal(cfg.DNS)
 	//log.Debugf("Dns config is %s", string(b))

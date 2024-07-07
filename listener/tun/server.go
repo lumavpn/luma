@@ -2,6 +2,7 @@ package tun
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/netip"
@@ -246,7 +247,8 @@ func New(options *config.Tun, tunnel adapter.TransportHandler, additions ...inbo
 		InterfaceMonitor:         defaultInterfaceMonitor,
 		TableIndex:               tableIndex,
 	}
-
+	b, _ := json.Marshal(tunOptions)
+	log.Infof("Tun options are.. %v", string(b))
 	if options.BuildAndroidRules {
 		err = l.buildAndroidRules(&tunOptions)
 		if err != nil {
