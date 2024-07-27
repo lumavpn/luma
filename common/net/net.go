@@ -6,8 +6,8 @@ import (
 	"github.com/lumavpn/luma/common/net/deadline"
 	"github.com/lumavpn/luma/util"
 
-	"github.com/lumavpn/luma/common/bufio"
 	"github.com/lumavpn/luma/common/network"
+	"github.com/sagernet/sing/common/bufio"
 )
 
 var NewExtendedConn = bufio.NewExtendedConn

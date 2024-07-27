@@ -4,11 +4,11 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/lumavpn/luma/common/buf"
-	"github.com/lumavpn/luma/common/bufio"
-	M "github.com/lumavpn/luma/common/metadata"
 	"github.com/lumavpn/luma/common/net/packet"
-	N "github.com/lumavpn/luma/common/network"
+	"github.com/sagernet/sing/common/buf"
+	"github.com/sagernet/sing/common/bufio"
+	M "github.com/sagernet/sing/common/metadata"
+	N "github.com/sagernet/sing/common/network"
 )
 
 type SingPacketConn struct {

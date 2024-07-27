@@ -7,9 +7,9 @@ import (
 
 	"github.com/lumavpn/luma/common/atomic"
 
-	"github.com/lumavpn/luma/common/buf"
-	"github.com/lumavpn/luma/common/bufio"
 	"github.com/lumavpn/luma/common/network"
+	"github.com/sagernet/sing/common/buf"
+	"github.com/sagernet/sing/common/bufio"
 )
 
 type connReadResult struct {

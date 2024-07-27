@@ -6,9 +6,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/lumavpn/luma/common/buf"
 	M "github.com/lumavpn/luma/common/metadata"
 	"github.com/lumavpn/luma/util"
+	"github.com/sagernet/sing/common/buf"
 )
 
 type AbstractConn interface {

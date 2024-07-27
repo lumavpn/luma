@@ -7,11 +7,11 @@ import (
 	"time"
 
 	C "github.com/lumavpn/luma/common"
-	"github.com/lumavpn/luma/common/buf"
 	"github.com/lumavpn/luma/dialer"
 	M "github.com/lumavpn/luma/metadata"
 	P "github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/proxy/proto"
+	"github.com/sagernet/sing/common/buf"
 )
 
 type Reject struct {

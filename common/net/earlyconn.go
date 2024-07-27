@@ -4,8 +4,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/lumavpn/luma/common/buf"
 	"github.com/lumavpn/luma/common/once"
+	"github.com/sagernet/sing/common/buf"
 )
 
 type earlyConn struct {

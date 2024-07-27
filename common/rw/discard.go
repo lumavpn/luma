@@ -3,7 +3,7 @@ package rw
 import (
 	"io"
 
-	"github.com/lumavpn/luma/common/buf"
+	"github.com/sagernet/sing/common/buf"
 )
 
 var Discard io.Writer = discard{}

@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lumavpn/luma/common/buf"
 	N "github.com/lumavpn/luma/common/network"
+	"github.com/sagernet/sing/common/buf"
 )
 
 type pipeAddr struct{}

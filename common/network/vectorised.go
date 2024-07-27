@@ -1,8 +1,8 @@
 package network
 
 import (
-	"github.com/lumavpn/luma/common/buf"
 	M "github.com/lumavpn/luma/common/metadata"
+	"github.com/sagernet/sing/common/buf"
 )
 
 type VectorisedWriter interface {

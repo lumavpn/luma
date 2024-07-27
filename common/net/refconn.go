@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/lumavpn/luma/common/buf"
+	"github.com/sagernet/sing/common/buf"
 )
 
 type refConn struct {

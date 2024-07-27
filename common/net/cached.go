@@ -3,7 +3,7 @@ package net
 import (
 	"net"
 
-	"github.com/lumavpn/luma/common/buf"
+	"github.com/sagernet/sing/common/buf"
 )
 
 var _ ExtendedConn = (*CachedConn)(nil)

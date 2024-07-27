@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/lumavpn/luma/common/atomic"
-	"github.com/lumavpn/luma/common/buf"
 	N "github.com/lumavpn/luma/common/net"
 	M "github.com/lumavpn/luma/metadata"
 	"github.com/lumavpn/luma/proxy"
 	"github.com/lumavpn/luma/rule"
 	"github.com/lumavpn/luma/util"
+	"github.com/sagernet/sing/common/buf"
 
 	"github.com/gofrs/uuid/v5"
 )

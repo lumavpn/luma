@@ -1,9 +1,9 @@
 package callback
 
 import (
-	C "github.com/lumavpn/luma/proxy"
-	"github.com/lumavpn/luma/common/buf"
 	N "github.com/lumavpn/luma/common/network"
+	C "github.com/lumavpn/luma/proxy"
+	"github.com/sagernet/sing/common/buf"
 )
 
 type firstWriteCallBackConn struct {

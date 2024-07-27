@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lumavpn/luma/common/buf"
 	"github.com/lumavpn/luma/common/errors"
 	"github.com/lumavpn/luma/common/generics/list"
 	"github.com/lumavpn/luma/log"
+	"github.com/sagernet/sing/common/buf"
 
 	"golang.org/x/net/route"
 	"golang.org/x/sys/unix"
