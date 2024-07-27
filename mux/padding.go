@@ -6,11 +6,11 @@ import (
 	"math/rand"
 	"net"
 
-	"github.com/lumavpn/luma/common/buf"
-	"github.com/lumavpn/luma/common/bufio"
-	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/rw"
 	"github.com/lumavpn/luma/util"
+	"github.com/sagernet/sing/common/buf"
+	"github.com/sagernet/sing/common/bufio"
+	N "github.com/sagernet/sing/common/network"
 )
 
 const kFirstPaddings = 16

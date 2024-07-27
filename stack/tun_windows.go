@@ -13,13 +13,13 @@ import (
 	"unsafe"
 
 	"github.com/lumavpn/luma/common/atomic"
-	"github.com/lumavpn/luma/common/buf"
 	E "github.com/lumavpn/luma/common/errors"
 	"github.com/lumavpn/luma/common/windnsapi"
 	"github.com/lumavpn/luma/stack/internal/winipcfg"
 	"github.com/lumavpn/luma/stack/internal/winsys"
 	"github.com/lumavpn/luma/stack/internal/wintun"
 	"github.com/lumavpn/luma/util"
+	"github.com/sagernet/sing/common/buf"
 
 	"golang.org/x/sys/windows"
 )

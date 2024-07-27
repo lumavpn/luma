@@ -24,6 +24,7 @@ require (
 	github.com/puzpuzpuz/xsync/v3 v3.2.0
 	github.com/quic-go/quic-go v0.0.0-00010101000000-000000000000
 	github.com/refraction-networking/utls v1.6.6
+	github.com/sagernet/sing v0.0.0-00010101000000-000000000000
 	github.com/samber/lo v1.44.0
 	github.com/shirou/gopsutil/v4 v4.24.6
 	github.com/sirupsen/logrus v1.9.3
@@ -45,6 +46,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 	gvisor.dev/gvisor v0.0.0-20240517170804-b75aeeae9582
 )
+
+replace github.com/sagernet/sing => github.com/lumavpn/sing v0.0.0-20240726000009-a2f9fef93663
 
 replace github.com/quic-go/quic-go => github.com/lumavpn/quic-go v0.0.0-20240703055136-a43b314b7110
 

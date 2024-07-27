@@ -6,12 +6,12 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/lumavpn/luma/common/buf"
 	E "github.com/lumavpn/luma/common/errors"
-	M "github.com/lumavpn/luma/common/metadata"
 	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/rw"
 	"github.com/lumavpn/luma/util"
+	"github.com/sagernet/sing/common/buf"
+	M "github.com/sagernet/sing/common/metadata"
 )
 
 const (

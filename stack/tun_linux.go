@@ -11,8 +11,6 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/lumavpn/luma/common/buf"
-	"github.com/lumavpn/luma/common/bufio"
 	E "github.com/lumavpn/luma/common/errors"
 	"github.com/lumavpn/luma/common/generics/list"
 	N "github.com/lumavpn/luma/common/network"
@@ -22,6 +20,8 @@ import (
 	"github.com/lumavpn/luma/stack/monitor"
 	"github.com/lumavpn/luma/util"
 	"github.com/lumavpn/netlink"
+	"github.com/sagernet/sing/common/buf"
+	"github.com/sagernet/sing/common/bufio"
 	"golang.org/x/sys/unix"
 )
 

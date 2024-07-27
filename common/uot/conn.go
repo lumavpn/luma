@@ -5,12 +5,12 @@ import (
 	"io"
 	"net"
 
-	"github.com/lumavpn/luma/common/buf"
-	"github.com/lumavpn/luma/common/bufio"
 	E "github.com/lumavpn/luma/common/errors"
-	M "github.com/lumavpn/luma/common/metadata"
-	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/util"
+	"github.com/sagernet/sing/common/buf"
+	"github.com/sagernet/sing/common/bufio"
+	M "github.com/sagernet/sing/common/metadata"
+	N "github.com/sagernet/sing/common/network"
 )
 
 var (

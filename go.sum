@@ -76,6 +76,8 @@ github.com/lumavpn/netlink v0.0.0-20240622200618-d7ea0797ee48 h1:0Qv9XpiUXNZXp2h
 github.com/lumavpn/netlink v0.0.0-20240622200618-d7ea0797ee48/go.mod h1:JDH6RK7rc3Niib31hFxvFESx+aRQw1KEmF9mAXFjY4w=
 github.com/lumavpn/quic-go v0.0.0-20240703055136-a43b314b7110 h1:RV7k137RKhBxQS3pIzzyNjccuA1XHllyVUfsOuqcQo8=
 github.com/lumavpn/quic-go v0.0.0-20240703055136-a43b314b7110/go.mod h1:1dLehS7TIR64+vxGR70GDcatWTOtMX2PUtnKsjbTurI=
+github.com/lumavpn/sing v0.0.0-20240726000009-a2f9fef93663 h1:GmKIzL7ZBvdi6bngc2K9SIaZOLXYanU8QQkZUqGf2xM=
+github.com/lumavpn/sing v0.0.0-20240726000009-a2f9fef93663/go.mod h1:ARkL0gM13/Iv5VCZmci/NuoOlePoIsW0m7BWfln/Hak=
 github.com/lumavpn/systray v0.0.0-20240703054549-1768e88e4ae2 h1:VDZai6weZcWlCagN3nYa0xlIccvgw/IKJof+Wmi9+M8=
 github.com/lumavpn/systray v0.0.0-20240703054549-1768e88e4ae2/go.mod h1:IWbXME4gkAwmI6ybKoY0ekm+18FFs+OSXSCPLtrR1Rk=
 github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0=

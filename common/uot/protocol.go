@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/lumavpn/luma/common/buf"
-	M "github.com/lumavpn/luma/common/metadata"
 	"github.com/lumavpn/luma/util"
+	"github.com/sagernet/sing/common/buf"
+	M "github.com/sagernet/sing/common/metadata"
 )
 
 const (

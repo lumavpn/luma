@@ -11,10 +11,10 @@ import (
 	"github.com/lumavpn/luma/listener/mux"
 	"github.com/lumavpn/luma/log"
 
-	"github.com/lumavpn/luma/common/buf"
-	"github.com/lumavpn/luma/common/bufio"
-	M "github.com/lumavpn/luma/common/metadata"
-	"github.com/lumavpn/luma/common/network"
+	"github.com/sagernet/sing/common/buf"
+	"github.com/sagernet/sing/common/bufio"
+	M "github.com/sagernet/sing/common/metadata"
+	"github.com/sagernet/sing/common/network"
 )
 
 type ListenerHandler struct {

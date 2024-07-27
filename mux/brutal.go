@@ -4,10 +4,10 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/lumavpn/luma/common/buf"
 	E "github.com/lumavpn/luma/common/errors"
 	"github.com/lumavpn/luma/common/rw"
 	"github.com/lumavpn/luma/util"
+	"github.com/sagernet/sing/common/buf"
 )
 
 const (

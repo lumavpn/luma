@@ -7,15 +7,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/lumavpn/luma/common/buf"
-	"github.com/lumavpn/luma/common/control"
 	"github.com/lumavpn/luma/common/errors"
-	M "github.com/lumavpn/luma/common/metadata"
-	N "github.com/lumavpn/luma/common/network"
-	"github.com/lumavpn/luma/common/udpnat"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/stack/internal/lumatcpip"
 	"github.com/lumavpn/luma/util"
+	"github.com/sagernet/sing/common/buf"
+	"github.com/sagernet/sing/common/control"
+	M "github.com/sagernet/sing/common/metadata"
+	N "github.com/sagernet/sing/common/network"
+	"github.com/sagernet/sing/common/udpnat"
 )
 
 var ErrIncludeAllNetworks = errors.New("`system` and `mixed` stack are not available when `includeAllNetworks` is enabled.")

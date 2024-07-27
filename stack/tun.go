@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/lumavpn/luma/common/errors"
-	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/ranges"
 	"github.com/lumavpn/luma/stack/monitor"
 	"github.com/lumavpn/luma/util"
+	N "github.com/sagernet/sing/common/network"
 )
 
 type Handler interface {

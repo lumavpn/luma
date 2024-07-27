@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/lumavpn/luma/common/generics/list"
-	M "github.com/lumavpn/luma/common/metadata"
 	"github.com/lumavpn/luma/log"
 	"github.com/lumavpn/luma/util"
+	M "github.com/sagernet/sing/common/metadata"
 )
 
 func (m *networkUpdateMonitor) RegisterCallback(callback NetworkUpdateCallback) *list.Element[NetworkUpdateCallback] {

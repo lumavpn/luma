@@ -7,8 +7,8 @@ import (
 	"net"
 	"net/netip"
 
-	"github.com/lumavpn/luma/common/control"
 	"github.com/lumavpn/luma/log"
+	"github.com/sagernet/sing/common/control"
 )
 
 type Stack interface {

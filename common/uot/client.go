@@ -5,8 +5,8 @@ import (
 	"net"
 
 	E "github.com/lumavpn/luma/common/errors"
-	M "github.com/lumavpn/luma/common/metadata"
-	N "github.com/lumavpn/luma/common/network"
+	M "github.com/sagernet/sing/common/metadata"
+	N "github.com/sagernet/sing/common/network"
 )
 
 type Client struct {

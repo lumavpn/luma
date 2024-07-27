@@ -3,9 +3,9 @@ package mux
 import (
 	"encoding/binary"
 
-	"github.com/lumavpn/luma/common/buf"
-	M "github.com/lumavpn/luma/common/metadata"
-	N "github.com/lumavpn/luma/common/network"
+	"github.com/sagernet/sing/common/buf"
+	M "github.com/sagernet/sing/common/metadata"
+	N "github.com/sagernet/sing/common/network"
 )
 
 var _ N.PacketReadWaiter = (*clientPacketConn)(nil)

@@ -6,11 +6,11 @@ import (
 	"net"
 	"sync"
 
-	"github.com/lumavpn/luma/common/buf"
-	M "github.com/lumavpn/luma/common/metadata"
-	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/rw"
 	"github.com/lumavpn/luma/util"
+	"github.com/sagernet/sing/common/buf"
+	M "github.com/sagernet/sing/common/metadata"
+	N "github.com/sagernet/sing/common/network"
 )
 
 type serverConn struct {

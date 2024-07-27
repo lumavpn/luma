@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	M "github.com/lumavpn/luma/common/metadata"
 	"github.com/lumavpn/luma/util"
+	M "github.com/sagernet/sing/common/metadata"
 )
 
 type httpConn struct {

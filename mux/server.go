@@ -4,14 +4,14 @@ import (
 	"context"
 	"net"
 
-	"github.com/lumavpn/luma/common/bufio"
 	E "github.com/lumavpn/luma/common/errors"
-	M "github.com/lumavpn/luma/common/metadata"
-	N "github.com/lumavpn/luma/common/network"
 	"github.com/lumavpn/luma/common/task"
 	"github.com/lumavpn/luma/internal/debug"
 	"github.com/lumavpn/luma/internal/version"
 	"github.com/lumavpn/luma/log"
+	"github.com/sagernet/sing/common/bufio"
+	M "github.com/sagernet/sing/common/metadata"
+	N "github.com/sagernet/sing/common/network"
 )
 
 type ServiceHandler interface {

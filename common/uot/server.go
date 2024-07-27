@@ -5,8 +5,8 @@ import (
 	"io"
 	"net"
 
-	"github.com/lumavpn/luma/common/buf"
-	M "github.com/lumavpn/luma/common/metadata"
+	"github.com/sagernet/sing/common/buf"
+	M "github.com/sagernet/sing/common/metadata"
 )
 
 type ServerConn struct {
